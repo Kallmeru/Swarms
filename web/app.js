@@ -174,3 +174,19 @@ fetch('data/benchmark_summary.json')
     });
   })
   .catch(err => { loadErrorEl.textContent = `Could not load benchmark_summary.json: ${err.message}`; });
+
+// dock scroll-spy: highlights the nav item for whichever section is in view
+const dockItems = document.querySelectorAll('.dock-item[data-section]');
+const sections = Array.from(dockItems)
+  .map(item => document.getElementById(item.dataset.section))
+  .filter(Boolean);
+
+if (sections.length && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const item = document.querySelector(`.dock-item[data-section="${entry.target.id}"]`);
+      if (item) item.classList.toggle('active', entry.isIntersecting);
+    });
+  }, { rootMargin: '-40% 0px -50% 0px' });
+  sections.forEach(s => observer.observe(s));
+}

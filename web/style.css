@@ -13,9 +13,13 @@
   --ochre:     #B9812E;   /* UNTRUSTED — tainted, in transit, not yet acted on */
   --crimson:   #AA3529;   /* BLOCKED marker / worm-succeeded — danger, alarm */
   --neutral:   #C2B29B;   /* unvisited node/edge */
+  --violet:    #5B3CA6;   /* single vivid accent, reserved for the one primary call to action */
+  --violet-dark: #45298C;
 }
 
 * { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
   font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
@@ -23,13 +27,107 @@ body {
   background: var(--cream);
   max-width: 880px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 5rem;
+  padding: 1.5rem 1.5rem 5rem;
   line-height: 1.6;
+}
+
+#concept, #demo, #benchmark { scroll-margin-top: 5rem; }
+
+/* ---------- the dock: a sensor unit, plugged in on the left, cable trailing right ---------- */
+
+.dock {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  width: fit-content;
+  max-width: calc(100% - 2.5rem);
+  margin: 0 auto 3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fdfcfa 0%, #ddd7cd 55%, #efece5 100%);
+  border: 1px solid rgba(43, 35, 32, 0.18);
+  box-shadow: 0 8px 18px rgba(43, 35, 32, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.dock-plug {
+  width: 20px;
+  height: 11px;
+  margin-left: -0.4rem;
+  margin-right: 0.35rem;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4a4038, var(--ink));
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0.3rem 0.55rem 0.35rem;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.dock-item svg { width: 17px; height: 17px; }
+.dock-item:hover { color: var(--ink); background: rgba(43, 35, 32, 0.06); }
+.dock-item.active { color: var(--ink); }
+.dock-item.active svg { color: var(--violet); }
+.dock-item::after {
+  content: "";
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  margin-top: 2px;
+  background: transparent;
+}
+.dock-item.active::after { background: var(--violet); }
+
+.dock-cta {
+  margin-left: 0.15rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(91, 60, 166, 0.45);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.dock-cta:hover { background: var(--violet-dark); transform: translateY(-1px); }
+
+.dock-cable {
+  width: 26px;
+  height: 2px;
+  margin-left: 0.3rem;
+  margin-right: -0.35rem;
+  border-radius: 2px;
+  background: var(--ink);
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .dock-item span:last-child { display: none; } /* icons only once labels won't fit */
+  .dock { gap: 0.05rem; }
 }
 
 /* ---------- header: seal mark + serif wordmark, rules flanking a nav row ---------- */
 
-.masthead { text-align: center; margin-bottom: 2.5rem; }
+.masthead { text-align: center; margin-bottom: 2.5rem; margin-top: 2rem; }
 
 .seal { display: block; margin: 0 auto 0.75rem; }
 
@@ -97,12 +195,14 @@ body {
   color: var(--ink);
 }
 .controls button {
-  background: var(--ink);
-  color: var(--cream);
-  border-color: var(--ink);
+  background: var(--violet);
+  color: #fff;
+  border-color: var(--violet);
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(91, 60, 166, 0.35);
 }
-.controls button:hover { background: var(--crimson); border-color: var(--crimson); }
+.controls button:hover { background: var(--violet-dark); border-color: var(--violet-dark); }
 .load-error { color: var(--crimson); font-weight: 600; }
 
 /* ---------- split panes: thin rule between, no boxed borders ---------- */

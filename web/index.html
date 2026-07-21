@@ -12,6 +12,32 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- the "dock": TRIPWIRE as a physical sensor unit — plugged in on the left,
+       trailing a cable on the right, same wire-between-two-posts idea as the seal mark -->
+  <nav class="dock" aria-label="Site">
+    <span class="dock-plug" aria-hidden="true"></span>
+
+    <a href="#concept" class="dock-item" data-section="concept">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M5 2h7l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4"/><path d="M12 2v3h3" stroke="currentColor" stroke-width="1.4"/><line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="6.5" y1="13" x2="13.5" y2="13" stroke="currentColor" stroke-width="1.2"/><line x1="6.5" y1="16" x2="11" y2="16" stroke="currentColor" stroke-width="1.2"/></svg>
+      <span>Concept</span>
+    </a>
+    <a href="#demo" class="dock-item" data-section="demo">
+      <svg viewBox="0 0 20 20" fill="none"><circle cx="4" cy="10" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="4" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="16" r="2.2" stroke="currentColor" stroke-width="1.4"/><line x1="6" y1="9" x2="14" y2="5" stroke="currentColor" stroke-width="1.2"/><line x1="6" y1="11" x2="14" y2="15" stroke="currentColor" stroke-width="1.2"/></svg>
+      <span>Demo</span>
+    </a>
+    <a href="#benchmark" class="dock-item" data-section="benchmark">
+      <svg viewBox="0 0 20 20" fill="none"><line x1="3" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.4"/><rect x="4.5" y="11" width="3" height="6" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="7" width="3" height="10" stroke="currentColor" stroke-width="1.3"/><rect x="12.5" y="3" width="3" height="14" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span>Benchmark</span>
+    </a>
+    <a href="https://github.com/Kallmeru/Swarms" target="_blank" rel="noopener" class="dock-item">
+      <svg viewBox="0 0 20 20" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><circle cx="5" cy="16" r="2" stroke="currentColor" stroke-width="1.4"/><circle cx="15" cy="10" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 6v8M5 8c0 3 4 3 8 2" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span>Source</span>
+    </a>
+
+    <a href="#demo" class="dock-cta">Run Attack</a>
+    <span class="dock-cable" aria-hidden="true"></span>
+  </nav>
+
   <header class="masthead">
     <svg class="seal" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <circle cx="32" cy="32" r="27" stroke="#AA3529" stroke-width="1.5"/>
@@ -25,7 +51,7 @@
     <div class="nav-rule"><span>v2</span></div>
   </header>
 
-  <p class="intro">
+  <p id="concept" class="intro">
     Agents now hand work to other agents — a reader to an analyst, an analyst to an emailer.
     One poisoned document can ride that chain like a virus, infecting each agent that reads
     it in turn. TRIPWIRE labels every value <em>trusted</em> or <em>untrusted</em> the moment
@@ -33,29 +59,31 @@
     it didn't earn. Below: the same attack, once unguarded, once contained.
   </p>
 
-  <section class="controls">
-    <label for="attackPicker">Attack</label>
-    <select id="attackPicker"></select>
-    <button id="playBtn">Run Attack</button>
-    <span id="loadError" class="load-error"></span>
+  <section id="demo">
+    <div class="controls">
+      <label for="attackPicker">Attack</label>
+      <select id="attackPicker"></select>
+      <button id="playBtn">Run Attack</button>
+      <span id="loadError" class="load-error"></span>
+    </div>
+
+    <div class="split">
+      <div class="pane">
+        <h2>Shield off</h2>
+        <div id="graph-off" class="graph"></div>
+        <div id="status-off" class="status"></div>
+      </div>
+      <div class="pane">
+        <h2>Shield on</h2>
+        <div id="graph-on" class="graph"></div>
+        <div id="status-on" class="status"></div>
+      </div>
+    </div>
+
+    <div id="reason-panel" class="reason-panel"></div>
   </section>
 
-  <section class="split">
-    <div class="pane">
-      <h2>Shield off</h2>
-      <div id="graph-off" class="graph"></div>
-      <div id="status-off" class="status"></div>
-    </div>
-    <div class="pane">
-      <h2>Shield on</h2>
-      <div id="graph-on" class="graph"></div>
-      <div id="status-on" class="status"></div>
-    </div>
-  </section>
-
-  <section id="reason-panel" class="reason-panel"></section>
-
-  <section class="benchmark">
+  <section id="benchmark" class="benchmark">
     <h2>Benchmark results</h2>
     <p class="benchmark-note">Placeholder numbers from the sample attacks bundled in this repo — replaced automatically once <code>benchmark/run_benchmark.py</code> writes real results across the full attack set into <code>web/data/</code>.</p>
     <canvas id="benchmarkChart" width="400" height="180"></canvas>
