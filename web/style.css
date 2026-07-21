@@ -1,58 +1,178 @@
-:root { color-scheme: light dark; }
+/* TRIPWIRE v2 — warm editorial theme.
+   One deliberate palette, not a light/dark toggle: a seal-and-parchment
+   identity for a security demo, in the spirit of illustrated one-page sites
+   (thin rules, generous whitespace, a serif mark, a restrained accent duo). */
 
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  max-width: 1100px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+:root {
+  --cream:     #FBF3E4;   /* page background */
+  --paper:     #F3E7D3;   /* panel/card surface, one step deeper than cream */
+  --ink:       #2B2320;   /* primary text */
+  --ink-soft:  #786A5D;   /* secondary text, taglines, notes */
+  --rule:      #DDC9AC;   /* thin divider lines */
+  --sage:      #4B6B58;   /* TRUSTED / contained — safe outcome */
+  --ochre:     #B9812E;   /* UNTRUSTED — tainted, in transit, not yet acted on */
+  --crimson:   #AA3529;   /* BLOCKED marker / worm-succeeded — danger, alarm */
+  --neutral:   #C2B29B;   /* unvisited node/edge */
 }
 
-header h1 { margin-bottom: 0.25rem; }
-.tagline { color: #666; font-style: italic; margin-top: 0; }
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+  line-height: 1.6;
+}
+
+/* ---------- header: seal mark + serif wordmark, rules flanking a nav row ---------- */
+
+.masthead { text-align: center; margin-bottom: 2.5rem; }
+
+.seal { display: block; margin: 0 auto 0.75rem; }
+
+.wordmark {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.tagline {
+  font-family: "Fraunces", Georgia, serif;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  margin: 0.4rem 0 1.5rem;
+}
+
+.nav-rule {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 520px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-family: "Fraunces", Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+.nav-rule::before, .nav-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.intro {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.15rem;
+  text-align: center;
+  color: var(--ink);
+  max-width: 620px;
+  margin: 2rem auto 2.5rem;
+}
+
+/* ---------- controls ---------- */
 
 .controls {
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
+  font-size: 0.95rem;
 }
 .controls select, .controls button {
-  font-size: 1rem;
-  padding: 0.4rem 0.7rem;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
 }
-.load-error { color: #e74c3c; font-weight: 600; }
+.controls button {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+  cursor: pointer;
+}
+.controls button:hover { background: var(--crimson); border-color: var(--crimson); }
+.load-error { color: var(--crimson); font-weight: 600; }
 
-.split { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+/* ---------- split panes: thin rule between, no boxed borders ---------- */
+
+.split {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin-top: 2rem;
+}
 .pane {
   flex: 1;
-  min-width: 320px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0.75rem;
+  min-width: 300px;
+  padding: 1.25rem 1.5rem;
 }
-.pane h2 { margin-top: 0; }
-.graph { height: 260px; }
+.pane:first-child { border-right: 1px solid var(--rule); }
+.pane h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  margin-top: 0;
+  font-size: 1.3rem;
+}
+.graph { height: 240px; }
 
-.status { margin-top: 0.5rem; font-weight: 600; min-height: 1.5em; }
-.status.blocked { color: #2ecc71; }  /* contained = GOOD outcome, shown green */
-.status.leaked  { color: #e74c3c; }  /* worm succeeded = BAD outcome, shown red */
+.status { margin-top: 0.75rem; font-weight: 600; min-height: 1.6em; }
+.status.blocked { color: var(--sage); }    /* contained = GOOD outcome */
+.status.leaked  { color: var(--crimson); } /* worm succeeded = BAD outcome */
+
+.status .seal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  border: 1.5px solid var(--sage);
+  border-radius: 50%;
+  margin-right: 0.4em;
+  font-size: 0.85em;
+  vertical-align: -0.15em;
+}
 
 .reason-panel {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
-  background: rgba(127, 127, 127, 0.08);
-  border-radius: 8px;
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--paper);
+  border-left: 3px solid var(--crimson);
+  border-radius: 2px;
   min-height: 2em;
-  line-height: 1.5;
+  line-height: 1.6;
 }
+.reason-panel:empty { display: none; }
 
-.benchmark { margin-top: 2rem; }
-.benchmark-note { color: #777; font-size: 0.9rem; }
+/* ---------- benchmark ---------- */
 
-@media (prefers-color-scheme: dark) {
-  body { color: #e8e8e8; }
-  .pane { border-color: #444; }
-  .tagline, .benchmark-note { color: #999; }
-  .reason-panel { background: rgba(255, 255, 255, 0.06); }
+.benchmark { margin-top: 3rem; text-align: center; }
+.benchmark h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+}
+.benchmark-note { color: var(--ink-soft); font-size: 0.9rem; max-width: 520px; margin: 0 auto 1.5rem; }
+#benchmarkChart { max-width: 520px; margin: 0 auto; }
+
+/* ---------- footer ---------- */
+
+.colophon {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
 }
