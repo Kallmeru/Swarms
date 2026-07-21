@@ -1,4 +1,4 @@
-// TRIPWIRE v2 frontend — reads pre-generated event JSON (see web/data/) and
+// TRIPWIRE v2 frontend. Reads pre-generated event JSON (see web/data/) and
 // animates the swarm graph. No backend calls of its own: benchmark/run_benchmark.py
 // (owned by the core + attack-lab branches) is the only thing that writes into web/data/.
 // Schema for every file here is documented in person3-frontend-visualization.md.
@@ -77,7 +77,7 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
   if (evt.type === 'ACTION_ALLOWED' && evt.agent === 'agent3_emailer' && evt.data.action === 'send_email') {
     graph.edges.update({ id: 'e_a3_act', color: BLOCKED, width: 4 });
     graph.nodes.update({ id: 'action', color: nodeColor(BLOCKED), borderWidth: 2.5 });
-    statusEl.innerHTML = `<b>WORM SUCCEEDED</b> — malicious email sent.`;
+    statusEl.innerHTML = `<b>WORM SUCCEEDED</b>: malicious email sent.`;
     statusEl.className = 'status leaked';
   }
 
@@ -144,7 +144,7 @@ fetch('data/manifest.json')
     list.forEach(a => {
       const opt = document.createElement('option');
       opt.value = a.attack_id;
-      opt.textContent = `${a.attack_id} — ${a.name} (${a.category})`;
+      opt.textContent = `${a.attack_id}: ${a.name} (${a.category})`;
       sel.appendChild(opt);
     });
   })

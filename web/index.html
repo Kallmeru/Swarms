@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRIPWIRE v2 — Immune System for AI Agent Swarms</title>
+<title>TRIPWIRE v2: Immune System for AI Agent Swarms</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
@@ -12,8 +12,8 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- the "dock": TRIPWIRE as a physical sensor unit — plugged in on the left,
-       trailing a cable on the right, same wire-between-two-posts idea as the seal mark -->
+  <!-- the "dock": TRIPWIRE as a physical sensor unit, plugged in on the left,
+       trailing a cable on the right, the same wire-between-two-posts idea as the seal mark -->
   <nav class="dock" aria-label="Site">
     <span class="dock-plug" aria-hidden="true"></span>
 
@@ -52,7 +52,7 @@
   </header>
 
   <p id="concept" class="intro">
-    Agents now hand work to other agents — a reader to an analyst, an analyst to an emailer.
+    Agents now hand work to other agents: a reader to an analyst, an analyst to an emailer.
     One poisoned document can ride that chain like a virus, infecting each agent that reads
     it in turn. TRIPWIRE labels every value <em>trusted</em> or <em>untrusted</em> the moment
     it enters the system, and strips a command's authority the instant it crosses a boundary
@@ -85,11 +85,11 @@
 
   <section id="benchmark" class="benchmark">
     <h2>Benchmark results</h2>
-    <p class="benchmark-note">Placeholder numbers from the sample attacks bundled in this repo — replaced automatically once <code>benchmark/run_benchmark.py</code> writes real results across the full attack set into <code>web/data/</code>.</p>
+    <p class="benchmark-note">Placeholder numbers from the sample attacks bundled in this repo. They get replaced automatically once <code>benchmark/run_benchmark.py</code> writes real results across the full attack set into <code>web/data/</code>.</p>
     <canvas id="benchmarkChart" width="400" height="180"></canvas>
   </section>
 
-  <footer class="colophon">TRIPWIRE v2 — prototype, still being infected on purpose.</footer>
+  <footer class="colophon">TRIPWIRE v2, a prototype, still being infected on purpose.</footer>
 
   <script src="app.js"></script>
 </body>
