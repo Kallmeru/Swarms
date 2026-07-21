@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRIPWIRE v2 — Immune System for AI Agent Swarms</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>TRIPWIRE v2</h1>
+    <p class="tagline">One poisoned document can infect an entire network of AI agents. This is the quarantine.</p>
+  </header>
+
+  <section class="controls">
+    <label for="attackPicker">Attack:</label>
+    <select id="attackPicker"></select>
+    <button id="playBtn">▶ Run Attack</button>
+    <span id="loadError" class="load-error"></span>
+  </section>
+
+  <section class="split">
+    <div class="pane">
+      <h2>Shield OFF</h2>
+      <div id="graph-off" class="graph"></div>
+      <div id="status-off" class="status"></div>
+    </div>
+    <div class="pane">
+      <h2>Shield ON</h2>
+      <div id="graph-on" class="graph"></div>
+      <div id="status-on" class="status"></div>
+    </div>
+  </section>
+
+  <section id="reason-panel" class="reason-panel"></section>
+
+  <section class="benchmark">
+    <h2>Benchmark results</h2>
+    <p class="benchmark-note">Placeholder numbers from the sample attacks bundled in this repo — will be replaced automatically once <code>benchmark/run_benchmark.py</code> writes real 60-attack results into <code>web/data/</code>.</p>
+    <canvas id="benchmarkChart" width="400" height="180"></canvas>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

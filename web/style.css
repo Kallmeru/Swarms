@@ -1,0 +1,58 @@
+:root { color-scheme: light dark; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+header h1 { margin-bottom: 0.25rem; }
+.tagline { color: #666; font-style: italic; margin-top: 0; }
+
+.controls {
+  margin: 1rem 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.controls select, .controls button {
+  font-size: 1rem;
+  padding: 0.4rem 0.7rem;
+}
+.load-error { color: #e74c3c; font-weight: 600; }
+
+.split { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.pane {
+  flex: 1;
+  min-width: 320px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+.pane h2 { margin-top: 0; }
+.graph { height: 260px; }
+
+.status { margin-top: 0.5rem; font-weight: 600; min-height: 1.5em; }
+.status.blocked { color: #2ecc71; }  /* contained = GOOD outcome, shown green */
+.status.leaked  { color: #e74c3c; }  /* worm succeeded = BAD outcome, shown red */
+
+.reason-panel {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(127, 127, 127, 0.08);
+  border-radius: 8px;
+  min-height: 2em;
+  line-height: 1.5;
+}
+
+.benchmark { margin-top: 2rem; }
+.benchmark-note { color: #777; font-size: 0.9rem; }
+
+@media (prefers-color-scheme: dark) {
+  body { color: #e8e8e8; }
+  .pane { border-color: #444; }
+  .tagline, .benchmark-note { color: #999; }
+  .reason-panel { background: rgba(255, 255, 255, 0.06); }
+}

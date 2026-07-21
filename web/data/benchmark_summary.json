@@ -1,0 +1,6 @@
+{
+  "total_attacks": 2,
+  "shield_off_success_rate": 1.0,
+  "shield_on_success_rate": 0.0,
+  "_note": "Placeholder from the 2 sample attacks bundled for frontend development. benchmark/run_benchmark.py (core + attack-lab branches) overwrites this file with real results across the full attack set."
+}
