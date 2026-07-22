@@ -3,5 +3,5 @@
 AI multi agentic poisoned doc detectetor
 
 Core Folder: Paru
------ : Dipesh
------ : @blaze
+UI : Dipesh
+Agents/Worm : @blaze
