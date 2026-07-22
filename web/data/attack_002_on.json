@@ -108,7 +108,7 @@
     "data": {
       "allowed": false,
       "action": "send_email",
-      "reason": "control argument 'to' traces to untrusted source 'agent:agent2_analyst' — an instruction derived from untrusted content cannot authorize a privileged action",
+      "reason": "control argument 'to' traces to untrusted source 'agent:agent2_analyst', an instruction derived from untrusted content cannot authorize a privileged action",
       "offending_arg": "to",
       "offending_source": "agent:agent2_analyst",
       "offending_span": "attacker@evil.com"
@@ -123,7 +123,7 @@
     "data": {
       "allowed": false,
       "action": "send_email",
-      "reason": "control argument 'to' traces to untrusted source 'agent:agent2_analyst' — an instruction derived from untrusted content cannot authorize a privileged action",
+      "reason": "control argument 'to' traces to untrusted source 'agent:agent2_analyst', an instruction derived from untrusted content cannot authorize a privileged action",
       "offending_arg": "to",
       "offending_source": "agent:agent2_analyst",
       "offending_span": "attacker@evil.com"
