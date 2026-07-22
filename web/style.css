@@ -1,0 +1,326 @@
+/* TRIPWIRE OS: the whole site as a simulated desktop.
+   Draggable file and folder icons, floating windows you can drag by the
+   title bar, a menu bar, a scrolling ticker, a taskbar. Dark and technical
+   on purpose: this is a security tool, not an editorial page. */
+
+:root {
+  --bg:        #14100D;   /* desktop background */
+  --panel:     #1E1812;   /* window and icon surface */
+  --titlebar:  #241D16;   /* window title bar, one step up from panel */
+  --line:      #55483A;   /* borders and strokes */
+  --cream:     #F3E7D3;   /* primary text on dark */
+  --ink-soft:  #A0917E;   /* secondary and dim text */
+  --sage:      #6FA184;   /* TRUSTED / contained, safe outcome (lightened for dark bg) */
+  --ochre:     #D3A24E;   /* UNTRUSTED, tainted, in transit, not yet acted on */
+  --crimson:   #D6543F;   /* BLOCKED marker / worm-succeeded, danger, alarm */
+  --neutral:   #6B5F50;   /* unvisited node/edge */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  color: var(--cream);
+  background: var(--bg);
+  line-height: 1.55;
+}
+
+.os {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+button { font: inherit; }
+
+/* ---------- menu bar ---------- */
+
+.menubar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--titlebar);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+.menubar-brand { display: flex; align-items: center; gap: 0.5rem; color: var(--crimson); font-weight: 700; }
+.menubar-glyph { width: 20px; height: 20px; }
+.menubar-right { display: flex; align-items: center; gap: 1.25rem; color: var(--ink-soft); }
+
+/* ---------- ticker ---------- */
+
+.ticker {
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem 0;
+}
+.ticker-track {
+  display: flex;
+  gap: 3rem;
+  white-space: nowrap;
+  width: max-content;
+  animation: ticker 26s linear infinite;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  padding-left: 3rem;
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
+
+/* ---------- desktop ---------- */
+
+.desktop {
+  flex: 1 1 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.desktop-wallpaper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--panel);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+
+.icon {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 84px;
+  padding: 0.4rem;
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.icon:hover { background: rgba(243, 231, 211, 0.06); }
+.icon:focus-visible { outline: 1.5px solid var(--crimson); outline-offset: 2px; }
+.icon.dragging { cursor: grabbing; background: rgba(243, 231, 211, 0.1); z-index: 5; }
+.icon-glyph { width: 34px; height: 40px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+.icon-label {
+  font-size: 0.62rem;
+  text-align: center;
+  color: var(--cream);
+  line-height: 1.3;
+  word-break: break-word;
+}
+.icon-agent { cursor: grab; }
+.icon-agent .icon-glyph { width: 38px; height: 32px; }
+
+/* ---------- windows ---------- */
+
+.window {
+  display: none;
+  flex-direction: column;
+  position: fixed;
+  width: 320px;
+  max-height: 72vh;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  overflow: hidden;
+}
+.window.open { display: flex; }
+.window-wide { width: 640px; }
+
+#win-concept { left: 6%; top: 92px; }
+#win-attack  { left: 26%; top: 100px; }
+#win-benchmark { left: 62%; top: 92px; }
+
+.window-titlebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--titlebar);
+  border-bottom: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
+}
+.window-titlebar:active { cursor: grabbing; }
+.window-dots { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: none; padding: 0; cursor: pointer; }
+.dot-close { background: var(--crimson); }
+.dot-mid   { background: var(--ochre); }
+.dot-far   { background: var(--sage); }
+.window-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.window-body {
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 0.85rem;
+}
+.window-body p { margin: 0 0 0.9rem; }
+.window-body p:last-child { margin-bottom: 0; }
+
+/* ---------- controls (inside invoice_final.pdf) ---------- */
+
+.controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+}
+.controls select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 220px;
+}
+.controls select, .controls button {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--cream);
+}
+.controls button {
+  background: var(--crimson);
+  border-color: var(--crimson);
+  color: var(--bg);
+  font-weight: 700;
+  cursor: pointer;
+}
+.controls button:hover { background: #e2664f; }
+.load-error { color: var(--crimson); font-weight: 600; font-size: 0.72rem; }
+
+.split { display: flex; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.pane { flex: 1; min-width: 260px; padding: 0.9rem 1rem; }
+.pane:first-child { border-right: 1px solid var(--line); }
+.pane h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 0 0 0.5rem; font-weight: 600; }
+.graph { height: 190px; }
+
+.status { margin-top: 0.6rem; font-weight: 700; font-size: 0.78rem; min-height: 1.4em; }
+.status.blocked { color: var(--sage); }    /* contained, GOOD outcome */
+.status.leaked  { color: var(--crimson); } /* worm succeeded, BAD outcome */
+
+.status .seal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  border: 1.5px solid var(--sage);
+  border-radius: 50%;
+  margin-right: 0.4em;
+  font-size: 0.85em;
+  vertical-align: -0.15em;
+}
+
+.reason-panel {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg);
+  border-left: 3px solid var(--crimson);
+  border-radius: 2px;
+  min-height: 2em;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.reason-panel:empty { display: none; }
+
+.benchmark-note { color: var(--ink-soft); font-size: 0.72rem; margin-bottom: 1rem; }
+
+/* ---------- taskbar ---------- */
+
+.taskbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: var(--titlebar);
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+}
+.taskbar-brand { color: var(--crimson); font-weight: 700; letter-spacing: 0.04em; }
+.cursor { display: inline-block; width: 0.5em; height: 1em; background: var(--crimson); vertical-align: -0.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.taskbar-links { display: flex; gap: 0.5rem; }
+.taskbar-links button {
+  font: inherit;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+.taskbar-links button:hover { color: var(--cream); border-color: var(--cream); }
+.taskbar-links button.active { color: var(--bg); background: var(--crimson); border-color: var(--crimson); }
+
+/* ---------- mobile: static icon grid, full-screen windows, no dragging ---------- */
+
+@media (max-width: 780px) {
+  .os { height: auto; min-height: 100vh; overflow: visible; }
+  .desktop {
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 1rem 0.5rem 1.5rem;
+  }
+  .desktop-wallpaper { font-size: 2rem; }
+  .icon { position: static; width: auto; cursor: default; }
+  .icon-glyph { width: 30px; height: 34px; }
+  .icon-label { font-size: 0.58rem; }
+
+  .window {
+    position: fixed;
+    inset: 0;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    z-index: 100;
+  }
+  .window-wide { width: 100%; }
+  .window-titlebar { cursor: default; }
+  .split { flex-direction: column; }
+  .pane:first-child { border-right: none; border-bottom: 1px solid var(--line); }
+  .menubar-item:first-child { display: none; } /* keep only the clock on very small headers */
+}

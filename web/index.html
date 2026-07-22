@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TRIPWIRE v2: Immune System for AI Agent Swarms</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="os">
+
+  <header class="menubar">
+    <span class="menubar-brand">
+      <svg class="menubar-glyph" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <circle cx="32" cy="32" r="15" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="15" cy="32" r="2.4" fill="currentColor"/>
+        <circle cx="49" cy="32" r="2.4" fill="currentColor"/>
+        <polyline points="15,32 24,23 32,41 40,23 49,32" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      TRIPWIRE OS
+    </span>
+    <span class="menubar-right">
+      <span class="menubar-item">STATUS: MONITORING</span>
+      <span class="menubar-item" id="clock">00:00:00</span>
+    </span>
+  </header>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>MOVE THE FILES AROUND</span>
+      <span>OPEN THE POISONED INVOICE</span>
+      <span>WATCH THE INFECTION SPREAD</span>
+      <span>SEE IT STOPPED AT THE BORDER</span>
+      <span>MOVE THE FILES AROUND</span>
+      <span>OPEN THE POISONED INVOICE</span>
+      <span>WATCH THE INFECTION SPREAD</span>
+      <span>SEE IT STOPPED AT THE BORDER</span>
+    </div>
+  </div>
+
+  <main class="desktop" id="desktop">
+    <div class="desktop-wallpaper" aria-hidden="true">TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED&nbsp;&nbsp;&nbsp;TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED&nbsp;&nbsp;&nbsp;TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED</div>
+
+    <div class="icon" data-window="win-concept" role="button" tabindex="0" aria-label="Open concept.txt" style="left:6%; top:8%;">
+      <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><line x1="4" y1="14" x2="15" y2="14" stroke="var(--line)" stroke-width="1"/><line x1="4" y1="18" x2="12" y2="18" stroke="var(--line)" stroke-width="1"/></svg>
+      <span class="icon-label">concept.txt</span>
+    </div>
+
+    <div class="icon" data-window="win-attack" role="button" tabindex="0" aria-label="Open invoice_final.pdf" style="left:22%; top:30%;">
+      <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><circle cx="15" cy="19" r="3.4" fill="var(--crimson)"/></svg>
+      <span class="icon-label">invoice_final.pdf</span>
+    </div>
+
+    <div class="icon icon-agent" data-agent="agent1" style="left:44%; top:14%;">
+      <svg class="icon-glyph" viewBox="0 0 24 20" fill="none"><path d="M1 4.5c0-.83.67-1.5 1.5-1.5h6l1.8 2H21.5c.83 0 1.5.67 1.5 1.5V17c0 .83-.67 1.5-1.5 1.5h-19C1.67 18.5 1 17.83 1 17V4.5z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/></svg>
+      <span class="icon-label">agent_1_reader</span>
+    </div>
+
+    <div class="icon icon-agent" data-agent="agent2" style="left:60%; top:38%;">
+      <svg class="icon-glyph" viewBox="0 0 24 20" fill="none"><path d="M1 4.5c0-.83.67-1.5 1.5-1.5h6l1.8 2H21.5c.83 0 1.5.67 1.5 1.5V17c0 .83-.67 1.5-1.5 1.5h-19C1.67 18.5 1 17.83 1 17V4.5z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/></svg>
+      <span class="icon-label">agent_2_analyst</span>
+    </div>
+
+    <div class="icon icon-agent" data-agent="agent3" style="left:46%; top:62%;">
+      <svg class="icon-glyph" viewBox="0 0 24 20" fill="none"><path d="M1 4.5c0-.83.67-1.5 1.5-1.5h6l1.8 2H21.5c.83 0 1.5.67 1.5 1.5V17c0 .83-.67 1.5-1.5 1.5h-19C1.67 18.5 1 17.83 1 17V4.5z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/></svg>
+      <span class="icon-label">agent_3_emailer</span>
+    </div>
+
+    <div class="icon" data-window="win-benchmark" role="button" tabindex="0" aria-label="Open benchmark_results.csv" style="left:76%; top:12%;">
+      <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><rect x="4" y="12" width="2.4" height="6" fill="none" stroke="var(--line)" stroke-width="1"/><rect x="7.5" y="9" width="2.4" height="9" fill="none" stroke="var(--line)" stroke-width="1"/><rect x="11" y="14" width="2.4" height="4" fill="none" stroke="var(--line)" stroke-width="1"/></svg>
+      <span class="icon-label">benchmark_results.csv</span>
+    </div>
+
+    <div class="icon" data-href="https://github.com/Kallmeru/Swarms" role="button" tabindex="0" aria-label="Open source repository on GitHub" style="left:74%; top:58%;">
+      <svg class="icon-glyph" viewBox="0 0 24 20" fill="none"><path d="M1 4.5c0-.83.67-1.5 1.5-1.5h6l1.8 2H21.5c.83 0 1.5.67 1.5 1.5V17c0 .83-.67 1.5-1.5 1.5h-19C1.67 18.5 1 17.83 1 17V4.5z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/></svg>
+      <span class="icon-label">source/</span>
+    </div>
+  </main>
+
+  <section class="window" id="win-concept" aria-label="concept.txt">
+    <div class="window-titlebar">
+      <span class="window-dots"><button type="button" class="dot dot-close" aria-label="Close"></button><span class="dot dot-mid" aria-hidden="true"></span><span class="dot dot-far" aria-hidden="true"></span></span>
+      <span class="window-title">concept.txt</span>
+    </div>
+    <div class="window-body">
+      <p>Agents now hand work to other agents: a reader to an analyst, an analyst to an emailer. One poisoned document can ride that chain like a virus, infecting each agent that reads it in turn.</p>
+      <p>TRIPWIRE labels every value trusted or untrusted the moment it enters the system, and strips a command's authority the instant it crosses a boundary it did not earn. Untrusted content can be read, quoted, and summarized. It can never issue an order.</p>
+      <p>Open <b>invoice_final.pdf</b> on the desktop to watch it happen twice: once unguarded, once contained.</p>
+    </div>
+  </section>
+
+  <section class="window window-wide open" id="win-attack" aria-label="invoice_final.pdf">
+    <div class="window-titlebar">
+      <span class="window-dots"><button type="button" class="dot dot-close" aria-label="Close"></button><span class="dot dot-mid" aria-hidden="true"></span><span class="dot dot-far" aria-hidden="true"></span></span>
+      <span class="window-title">invoice_final.pdf, opened by agent_1_reader</span>
+    </div>
+    <div class="window-body">
+      <div class="controls">
+        <label for="attackPicker">Attack</label>
+        <select id="attackPicker"></select>
+        <button id="playBtn">Run Attack</button>
+        <span id="loadError" class="load-error"></span>
+      </div>
+
+      <div class="split">
+        <div class="pane">
+          <h2>Shield off</h2>
+          <div id="graph-off" class="graph"></div>
+          <div id="status-off" class="status"></div>
+        </div>
+        <div class="pane">
+          <h2>Shield on</h2>
+          <div id="graph-on" class="graph"></div>
+          <div id="status-on" class="status"></div>
+        </div>
+      </div>
+
+      <div id="reason-panel" class="reason-panel"></div>
+    </div>
+  </section>
+
+  <section class="window" id="win-benchmark" aria-label="benchmark_results.csv">
+    <div class="window-titlebar">
+      <span class="window-dots"><button type="button" class="dot dot-close" aria-label="Close"></button><span class="dot dot-mid" aria-hidden="true"></span><span class="dot dot-far" aria-hidden="true"></span></span>
+      <span class="window-title">benchmark_results.csv</span>
+    </div>
+    <div class="window-body">
+      <p class="benchmark-note">Placeholder numbers from the two sample attacks bundled in this repo. Replaced automatically once <code>benchmark/run_benchmark.py</code> writes real results across the full attack set into <code>web/data/</code>.</p>
+      <canvas id="benchmarkChart" width="380" height="220"></canvas>
+    </div>
+  </section>
+
+  <footer class="taskbar">
+    <span class="taskbar-brand">TRIPWIRE_<span class="cursor"></span></span>
+    <nav class="taskbar-links">
+      <button type="button" data-window="win-concept">CN</button>
+      <button type="button" data-window="win-attack">ATK</button>
+      <button type="button" data-window="win-benchmark">BM</button>
+      <button type="button" data-href="https://github.com/Kallmeru/Swarms">SRC</button>
+    </nav>
+  </footer>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

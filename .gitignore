@@ -1,0 +1,10 @@
+.claude/
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+.env
+runs/
+.DS_Store
+Thumbs.db
