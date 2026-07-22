@@ -1,0 +1,2 @@
+WE have 6 seperate logics for starter!
+with basic function code done!
