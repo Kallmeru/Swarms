@@ -1,4 +1,4 @@
-// TRIPWIRE v2 frontend. Reads pre-generated event JSON (see web/data/) and
+// SWARMS frontend. Reads pre-generated event JSON (see web/data/) and
 // animates the swarm graph inside the invoice_final.pdf window. No backend
 // calls of its own: benchmark/run_benchmark.py (core + attack-lab branches)
 // is the only thing that writes into web/data/.
