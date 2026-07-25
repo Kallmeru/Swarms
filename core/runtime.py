@@ -1,7 +1,13 @@
-from core.taint import TaintedValue, TaintLabel, combine_values
+from core.taint import TaintedValue, TaintLabel
 from core.capability import Capability, drop_capability
 from core.policy import authorize
-from core.logger import log_event
+from core.logger import (
+    log_event,
+    log_boundary,
+    log_capability_drop,
+    log_blocked_action,
+    log_allowed_action,
+)
 
 
 class AgentRuntime:
@@ -16,7 +22,6 @@ class AgentRuntime:
         """
         log_event("agent_run_start", {"agent": self.agent_name})
 
-        # Run the agent
         output = self.agent_fn(input_value)
 
         # If agent returns raw text, wrap it as UNTRUSTED
@@ -24,29 +29,34 @@ class AgentRuntime:
             output = TaintedValue(
                 value=output,
                 label=TaintLabel.UNTRUSTED,
-                provenance=[f"output_of:{self.agent_name}"]
+                provenance=[f"output_of:{self.agent_name}"],
             )
 
-        log_event("agent_run_end", {
-            "agent": self.agent_name,
-            "output_label": output.label.value
-        })
+        log_event(
+            "agent_run_end",
+            {
+                "agent": self.agent_name,
+                "output_label": output.label.value,
+            },
+        )
 
         return output
 
     def handoff(self, next_runtime, value: TaintedValue) -> TaintedValue:
         """
         Passes tainted value to the next agent.
-        Drops capability at boundary.
+        Drops capability at boundary and logs attenuation.
         """
-        log_event("boundary_cross", {
-            "from": self.agent_name,
-            "to": next_runtime.agent_name,
-            "value_label": value.label.value
-        })
+        # Log boundary with provenance
+        log_boundary(self.agent_name, next_runtime.agent_name, value)
 
-        # Drop capability at boundary
-        next_runtime.capability = drop_capability(next_runtime.capability)
+        # Log capability drop
+        old_cap = next_runtime.capability
+        new_cap = drop_capability(next_runtime.capability)
+        log_capability_drop(self.agent_name, next_runtime.agent_name, old_cap, new_cap)
+
+        # Apply dropped capability to next runtime
+        next_runtime.capability = new_cap
 
         return next_runtime.run(value)
 
@@ -58,17 +68,14 @@ class AgentRuntime:
         allowed = authorize(action, args, self.capability)
 
         if not allowed:
-            log_event("privileged_action_blocked", {
-                "agent": self.agent_name,
-                "action": action,
-                "args": {k: getattr(v, "value", v) for k, v in args.items()}
-            })
+            # Normalize args for logging (unwrap TaintedValue.value if present)
+            normalized_args = {
+                k: getattr(v, "value", v) for k, v in args.items()
+            }
+            log_blocked_action(self.agent_name, action, normalized_args)
             return False
 
-        log_event("privileged_action_allowed", {
-            "agent": self.agent_name,
-            "action": action
-        })
+        log_allowed_action(self.agent_name, action)
 
         # In real system, you'd call the actual action here.
         return True
