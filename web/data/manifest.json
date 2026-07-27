@@ -1,0 +1,4 @@
+[
+  { "attack_id": "attack_001", "name": "direct_override_1", "category": "direct_override" },
+  { "attack_id": "attack_002", "name": "multi_hop_email_redirect", "category": "multi_hop" }
+]
