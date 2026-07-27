@@ -4,6 +4,14 @@ class Capability:
         self.can_execute = can_execute
         self.can_write_file = can_write_file
 
+    def to_dict(self):
+        """Serialize capability for logging/UI."""
+        return {
+            "can_email": self.can_email,
+            "can_execute": self.can_execute,
+            "can_write_file": self.can_write_file,
+        }
+
 
 def drop_capability(cap: Capability) -> Capability:
     """

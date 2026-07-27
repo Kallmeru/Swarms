@@ -8,7 +8,7 @@ from core.runtime import AgentRuntime
 # -----------------------------
 
 def reader_agent(input_value: TaintedValue):
-    # Pretend the reader extracts text from a PDF
+    """Pretend the reader extracts text from a PDF."""
     extracted = f"Extracted: {input_value.value}"
     return TaintedValue(
         extracted,
@@ -18,18 +18,17 @@ def reader_agent(input_value: TaintedValue):
 
 
 def analyst_agent(input_value: TaintedValue):
-    # Pretend the analyst summarizes or analyzes text
+    """Pretend the analyst summarizes or analyzes text."""
     summary = f"Summary: {input_value.value}"
     return TaintedValue(
         summary,
-        input_value.label,  # taint stays the same
+        input_value.label,
         provenance=input_value.provenance + ["analyst_agent"]
     )
 
 
 def emailer_agent(input_value: TaintedValue):
-    # Pretend the emailer tries to send an email using the text
-    # (this is where the worm tries to execute)
+    """Pretend the emailer tries to send an email using the text."""
     return TaintedValue(
         f"Email attempt: {input_value.value}",
         input_value.label,
