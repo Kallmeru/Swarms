@@ -23,24 +23,69 @@ def _is_untrusted(value) -> bool:
     return False  # raw values are trusted unless wrapped
 
 
-def authorize(action: str, args: dict, capability: Capability) -> bool:
+def authorize(action: str, args: dict, capability: Capability):
     """
     Pure function: decides whether a privileged action is allowed.
+    Returns a structured verdict object required by the frontend:
+    {
+        "allowed": bool,
+        "reason": str or None,
+        "offending_span": str or None
+    }
     """
 
-    # 1. Capability check (does the agent have permission?)
+    # -----------------------------
+    # 1. Capability check
+    # -----------------------------
     if action == "send_email" and not capability.can_email:
-        return False
+        return {
+            "allowed": False,
+            "reason": "missing_capability",
+            "offending_span": None,
+        }
 
     if action == "execute" and not capability.can_execute:
-        return False
+        return {
+            "allowed": False,
+            "reason": "missing_capability",
+            "offending_span": None,
+        }
 
     if action == "write_file" and not capability.can_write_file:
-        return False
+        return {
+            "allowed": False,
+            "reason": "missing_capability",
+            "offending_span": None,
+        }
 
-    # 2. Taint check (are control arguments trusted?)
+    # -----------------------------
+    # 2. Taint check
+    # -----------------------------
     if _is_untrusted(args):
-        return False
+        # Extract the actual tainted text for frontend display
+        offending_span = None
 
-    # If all checks pass → allow
-    return True
+        # Try to extract a meaningful string
+        for v in args.values():
+            if isinstance(v, TaintedValue):
+                offending_span = v.value
+                break
+
+        # Fallback: stringify entire args
+        if offending_span is None:
+            offending_span = str(args)
+
+        return {
+            "allowed": False,
+            "reason": "untrusted_input",
+            "offending_span": offending_span,
+        }
+
+    # -----------------------------
+    # All checks passed → allow
+    # -----------------------------
+    return {
+        "allowed": True,
+        "reason": None,
+        "offending_span": None,
+    }

@@ -9,23 +9,32 @@ from core.logger import (
     log_allowed_action,
 )
 
+# ---------------------------------------------------------
+# Global shield toggle (ON = containment, OFF = worm escapes)
+# ---------------------------------------------------------
+SHIELD_ON = True
+
+# ---------------------------------------------------------
+# Map internal agent names → frontend agent IDs
+# ---------------------------------------------------------
+AGENT_NAME_MAP = {
+    "Reader": "agent1_reader",
+    "Analyst": "agent2_analyst",
+    "Emailer": "agent3_emailer",
+}
+
 
 class AgentRuntime:
     def __init__(self, agent_fn, capability: Capability, agent_name: str):
         self.agent_fn = agent_fn
         self.capability = capability
-        self.agent_name = agent_name
+        self.agent_name = AGENT_NAME_MAP[agent_name]
 
     def run(self, input_value: TaintedValue) -> TaintedValue:
-        """
-        Runs the agent with taint-aware input and wraps output.
-        """
-        # Wire-format event name
-        log_event("AGENT_START", {"agent": self.agent_name})
+        log_event("AGENT_START", {"agent": self.agent_name}, agent=self.agent_name)
 
         output = self.agent_fn(input_value)
 
-        # If agent returns raw text, wrap it as UNTRUSTED
         if not isinstance(output, TaintedValue):
             output = TaintedValue(
                 value=output,
@@ -33,64 +42,58 @@ class AgentRuntime:
                 provenance=[f"output_of:{self.agent_name}"],
             )
 
-        # Wire-format event name
         log_event(
             "AGENT_END",
             {
                 "agent": self.agent_name,
                 "output_label": output.label.value,
             },
+            agent=self.agent_name,
         )
 
         return output
 
     def handoff(self, next_runtime, value: TaintedValue) -> TaintedValue:
-        """
-        Passes tainted value to the next agent.
-        Drops capability at boundary and logs attenuation.
-        """
-        # Wire-format boundary event
         log_boundary(self.agent_name, next_runtime.agent_name, value)
 
-        # Capability drop
         old_cap = next_runtime.capability
-        new_cap = drop_capability(next_runtime.capability)
 
-        # Wire-format capability drop event
-        log_capability_drop(self.agent_name, next_runtime.agent_name, old_cap, new_cap)
+        # ---------------------------------------------------------
+        # SHIELD LOGIC: Only drop capability when SHIELD_ON = True
+        # ---------------------------------------------------------
+        if SHIELD_ON:
+            new_cap = drop_capability(next_runtime.capability)
 
-        # Apply dropped capability to next runtime
-        next_runtime.capability = new_cap
+            log_capability_drop(
+                self.agent_name,
+                next_runtime.agent_name,
+                old_cap,
+                new_cap
+            )
 
+            next_runtime.capability = new_cap
+
+        # If SHIELD_OFF → no capability drop
         return next_runtime.run(value)
 
     def privileged_action(self, action: str, args: dict):
-        """
-        Attempts a privileged action (email, execute, write file).
-        Enforces taint + capability rules.
-        """
-        allowed = authorize(action, args, self.capability)
+        verdict = authorize(action, args, self.capability)
 
-        if not allowed:
-            # Normalize args for logging (unwrap TaintedValue.value if present)
-            normalized_args = {
-                k: getattr(v, "value", v) for k, v in args.items()
-            }
+        normalized_args = {
+            k: getattr(v, "value", v) for k, v in args.items()
+        }
 
-            # Wire-format blocked action event
+        if not verdict["allowed"]:
             log_blocked_action(
                 agent=self.agent_name,
                 action=action,
                 args={
                     "normalized_args": normalized_args,
-                    "reason": "untrusted_input",
-                    "offending_span": normalized_args,
+                    "reason": verdict["reason"],
+                    "offending_span": verdict["offending_span"],
                 }
             )
             return False
 
-        # Wire-format allowed action event
         log_allowed_action(self.agent_name, action)
-
-        # In real system, you'd call the actual action here.
         return True

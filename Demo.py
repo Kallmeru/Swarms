@@ -1,3 +1,10 @@
+from core.logger import init_run
+init_run()
+
+# ⭐ IMPORTANT: import the module, not the variable
+import core.runtime
+core.runtime.SHIELD_ON = False   # <-- This actually disables capability drop
+
 from core.taint import TaintedValue, TaintLabel
 from core.capability import Capability
 from core.runtime import AgentRuntime
@@ -8,7 +15,6 @@ from core.runtime import AgentRuntime
 # -----------------------------
 
 def reader_agent(input_value: TaintedValue):
-    """Pretend the reader extracts text from a PDF."""
     extracted = f"Extracted: {input_value.value}"
     return TaintedValue(
         extracted,
@@ -18,7 +24,6 @@ def reader_agent(input_value: TaintedValue):
 
 
 def analyst_agent(input_value: TaintedValue):
-    """Pretend the analyst summarizes or analyzes text."""
     summary = f"Summary: {input_value.value}"
     return TaintedValue(
         summary,
@@ -28,7 +33,6 @@ def analyst_agent(input_value: TaintedValue):
 
 
 def emailer_agent(input_value: TaintedValue):
-    """Pretend the emailer tries to send an email using the text."""
     return TaintedValue(
         f"Email attempt: {input_value.value}",
         input_value.label,
@@ -37,11 +41,11 @@ def emailer_agent(input_value: TaintedValue):
 
 
 # -----------------------------
-# Setup runtimes
+# SHIELD OFF — no capability drop
 # -----------------------------
 
 reader = AgentRuntime(reader_agent, Capability(can_email=True), "Reader")
-analyst = AgentRuntime(analyst_agent, Capability(), "Analyst")
+analyst = AgentRuntime(analyst_agent, Capability(can_email=True), "Analyst")
 emailer = AgentRuntime(emailer_agent, Capability(can_email=True), "Emailer")
 
 
@@ -55,7 +59,7 @@ worm_payload = TaintedValue(
     provenance=["pdf:page2:line14"]
 )
 
-print("\n=== START TEST ===\n")
+print("\n=== START SHIELD-OFF TEST ===\n")
 
 # Reader processes PDF
 out1 = reader.run(worm_payload)
@@ -66,10 +70,10 @@ out2 = reader.handoff(analyst, out1)
 # Analyst → Emailer boundary
 out3 = analyst.handoff(emailer, out2)
 
-# Worm tries to send email
+# Worm tries to send email — SHOULD SUCCEED
 emailer.privileged_action(
     "send_email",
     {"recipient": out3}
 )
 
-print("\n=== END TEST ===\n")
+print("\n=== END SHIELD-OFF TEST ===\n")

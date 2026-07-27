@@ -3,73 +3,84 @@ import json
 import time
 import uuid
 
+# These are set per attack, not at import time
+RUN_ID = None
+RUN_DIR = None
+EVENT_FILE = None
 
-# ---------------------------------------------------------
-# Create a unique run_id for every execution of the program
-# ---------------------------------------------------------
-RUN_ID = str(uuid.uuid4())
-RUN_DIR = os.path.join("runs", RUN_ID)
-os.makedirs(RUN_DIR, exist_ok=True)
 
-EVENT_FILE = os.path.join(RUN_DIR, "events.jsonl")
+def init_run():
+    """Call once per attack/demo to initialize a fresh run."""
+    global RUN_ID, RUN_DIR, EVENT_FILE
+    RUN_ID = str(uuid.uuid4())
+    RUN_DIR = os.path.join("runs", RUN_ID)
+    os.makedirs(RUN_DIR, exist_ok=True)
+    EVENT_FILE = os.path.join(RUN_DIR, "events.jsonl")
 
 
 def _ts():
     return time.time()
 
 
-def log_event(event_type: str, data: dict):
+def log_event(event_type: str, data: dict, agent: str = None):
     """Generic event logger used by all core components."""
     event = {
+        "event_id": str(uuid.uuid4()),
+        "run_id": RUN_ID,
         "timestamp": _ts(),
         "type": event_type,
+        "agent": agent,
         "data": data
     }
 
-    # Terminal output
     print(json.dumps(event))
 
-    # Write to events.jsonl
     with open(EVENT_FILE, "a") as f:
         f.write(json.dumps(event) + "\n")
 
 
-# ---------------------------------------------------------
-# WIRE-FORMAT EVENT NAMES (Fix #3)
-# ---------------------------------------------------------
-
 def log_boundary(from_agent: str, to_agent: str, value):
-    """Logs taint + provenance when crossing agent boundaries."""
-    log_event("AGENT_HANDOFF", {
-        "from": from_agent,
-        "to": to_agent,
-        "value_label": value.label.value,
-        "provenance": value.provenance
-    })
+    log_event(
+        "AGENT_HANDOFF",
+        {
+            "from": from_agent,
+            "to": to_agent,
+            "value_label": value.label.value,
+            "provenance": value.provenance
+        },
+        agent=from_agent
+    )
 
 
 def log_capability_drop(from_agent: str, to_agent: str, old_cap, new_cap):
-    """Logs capability attenuation at boundaries."""
-    log_event("CAPABILITY_DROP", {
-        "from": from_agent,
-        "to": to_agent,
-        "old": old_cap.to_dict(),
-        "new": new_cap.to_dict()
-    })
+    log_event(
+        "CAPABILITY_DROP",
+        {
+            "from": from_agent,
+            "to": to_agent,
+            "old": old_cap.to_dict(),
+            "new": new_cap.to_dict()
+        },
+        agent=from_agent
+    )
 
 
 def log_blocked_action(agent: str, action: str, args=None):
-    """Logs when a privileged action is blocked."""
-    log_event("ACTION_BLOCKED", {
-        "agent": agent,
-        "action": action,
-        "args": args
-    })
+    log_event(
+        "ACTION_BLOCKED",
+        {
+            "action": action,
+            "args": args
+        },
+        agent=agent
+    )
 
 
 def log_allowed_action(agent: str, action: str):
-    """Logs when a privileged action is allowed."""
-    log_event("ACTION_ALLOWED", {
-        "agent": agent,
-        "action": action
-    })
+    log_event(
+        "ACTION_ALLOWED",
+        {
+            "action": action
+        },
+        agent=agent
+    )
