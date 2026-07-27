@@ -20,7 +20,8 @@ class AgentRuntime:
         """
         Runs the agent with taint-aware input and wraps output.
         """
-        log_event("agent_run_start", {"agent": self.agent_name})
+        # Wire-format event name
+        log_event("AGENT_START", {"agent": self.agent_name})
 
         output = self.agent_fn(input_value)
 
@@ -32,8 +33,9 @@ class AgentRuntime:
                 provenance=[f"output_of:{self.agent_name}"],
             )
 
+        # Wire-format event name
         log_event(
-            "agent_run_end",
+            "AGENT_END",
             {
                 "agent": self.agent_name,
                 "output_label": output.label.value,
@@ -47,12 +49,14 @@ class AgentRuntime:
         Passes tainted value to the next agent.
         Drops capability at boundary and logs attenuation.
         """
-        # Log boundary with provenance
+        # Wire-format boundary event
         log_boundary(self.agent_name, next_runtime.agent_name, value)
 
-        # Log capability drop
+        # Capability drop
         old_cap = next_runtime.capability
         new_cap = drop_capability(next_runtime.capability)
+
+        # Wire-format capability drop event
         log_capability_drop(self.agent_name, next_runtime.agent_name, old_cap, new_cap)
 
         # Apply dropped capability to next runtime
@@ -72,9 +76,20 @@ class AgentRuntime:
             normalized_args = {
                 k: getattr(v, "value", v) for k, v in args.items()
             }
-            log_blocked_action(self.agent_name, action, normalized_args)
+
+            # Wire-format blocked action event
+            log_blocked_action(
+                agent=self.agent_name,
+                action=action,
+                args={
+                    "normalized_args": normalized_args,
+                    "reason": "untrusted_input",
+                    "offending_span": normalized_args,
+                }
+            )
             return False
 
+        # Wire-format allowed action event
         log_allowed_action(self.agent_name, action)
 
         # In real system, you'd call the actual action here.
