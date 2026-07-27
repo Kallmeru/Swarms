@@ -21,6 +21,15 @@ class Capability:
         }
 
 
+def set_shield_enabled(value: bool) -> None:
+    """Flip the global shield toggle. Call this before a run rather than
+    setting the module attribute directly, so there's one obvious place
+    this happens (needed to run 60 attacks x on/off in one process without
+    each callsite reaching into another module's internals)."""
+    global SHIELD_ENABLED
+    SHIELD_ENABLED = value
+
+
 def drop_capability(cap: Capability) -> Capability:
     """
     Capability attenuation at agent boundaries.
