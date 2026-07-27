@@ -1,13 +1,7 @@
 from core.taint import TaintedValue, TaintLabel
 from core.capability import Capability, drop_capability
 from core.policy import authorize
-from core.logger import (
-    log_event,
-    log_boundary,
-    log_capability_drop,
-    log_blocked_action,
-    log_allowed_action,
-)
+from core.logger import log_event
 
 
 class AgentRuntime:
@@ -20,8 +14,10 @@ class AgentRuntime:
         """
         Runs the agent with taint-aware input and wraps output.
         """
-        # Wire-format event name
-        log_event("AGENT_START", {"agent": self.agent_name})
+        log_event("AGENT_START", {
+            "agent": self.agent_name,
+            "inputs": [{"label": input_value.label.value.upper()}],
+        })
 
         output = self.agent_fn(input_value)
 
@@ -33,34 +29,27 @@ class AgentRuntime:
                 provenance=[f"output_of:{self.agent_name}"],
             )
 
-        # Wire-format event name
-        log_event(
-            "AGENT_END",
-            {
-                "agent": self.agent_name,
-                "output_label": output.label.value,
-            },
-        )
+        log_event("AGENT_END", {
+            "agent": self.agent_name,
+            "output_label": output.label.value.upper(),
+            "output_preview": str(output.value)[:200],
+        })
 
         return output
 
     def handoff(self, next_runtime, value: TaintedValue) -> TaintedValue:
         """
         Passes tainted value to the next agent.
-        Drops capability at boundary and logs attenuation.
+        Drops capability at boundary (unless the shield is off) and logs
+        the crossing.
         """
-        # Wire-format boundary event
-        log_boundary(self.agent_name, next_runtime.agent_name, value)
+        next_runtime.capability = drop_capability(next_runtime.capability)
 
-        # Capability drop
-        old_cap = next_runtime.capability
-        new_cap = drop_capability(next_runtime.capability)
-
-        # Wire-format capability drop event
-        log_capability_drop(self.agent_name, next_runtime.agent_name, old_cap, new_cap)
-
-        # Apply dropped capability to next runtime
-        next_runtime.capability = new_cap
+        log_event("AGENT_HANDOFF", {
+            "agent": self.agent_name,
+            "data_label": value.label.value.upper(),
+            "data_preview": str(value.value)[:200],
+        })
 
         return next_runtime.run(value)
 
@@ -69,28 +58,23 @@ class AgentRuntime:
         Attempts a privileged action (email, execute, write file).
         Enforces taint + capability rules.
         """
-        allowed = authorize(action, args, self.capability)
+        allowed, reason, offending_arg, offending_span = authorize(action, args, self.capability)
 
         if not allowed:
-            # Normalize args for logging (unwrap TaintedValue.value if present)
-            normalized_args = {
-                k: getattr(v, "value", v) for k, v in args.items()
-            }
-
-            # Wire-format blocked action event
-            log_blocked_action(
-                agent=self.agent_name,
-                action=action,
-                args={
-                    "normalized_args": normalized_args,
-                    "reason": "untrusted_input",
-                    "offending_span": normalized_args,
-                }
-            )
+            log_event("ACTION_BLOCKED", {
+                "agent": self.agent_name,
+                "action": action,
+                "reason": reason,
+                "offending_arg": offending_arg,
+                "offending_span": offending_span,
+            })
             return False
 
-        # Wire-format allowed action event
-        log_allowed_action(self.agent_name, action)
+        log_event("ACTION_ALLOWED", {
+            "agent": self.agent_name,
+            "action": action,
+            "reason": reason,
+        })
 
         # In real system, you'd call the actual action here.
         return True
