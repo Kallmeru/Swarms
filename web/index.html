@@ -19,7 +19,7 @@
         <circle cx="49" cy="32" r="2.4" fill="currentColor"/>
         <polyline points="15,32 24,23 32,41 40,23 49,32" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       </svg>
-      SWARMS OS
+      <span class="menubar-brand-text" id="brandText">SWARMS OS</span>
     </span>
     <span class="menubar-right">
       <span class="menubar-item">STATUS: MONITORING</span>
@@ -42,13 +42,14 @@
 
   <main class="desktop" id="desktop">
     <div class="desktop-wallpaper" aria-hidden="true">TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED&nbsp;&nbsp;&nbsp;TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED&nbsp;&nbsp;&nbsp;TRUSTED&nbsp;&nbsp;&nbsp;UNTRUSTED</div>
+    <div id="dotField" aria-hidden="true"></div>
 
-    <div class="icon" data-window="win-concept" role="button" tabindex="0" aria-label="Open concept.txt" style="left:6%; top:8%;">
+    <div class="icon cursor-target" data-window="win-concept" role="button" tabindex="0" aria-label="Open concept.txt" style="left:6%; top:8%;">
       <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><line x1="4" y1="14" x2="15" y2="14" stroke="var(--line)" stroke-width="1"/><line x1="4" y1="18" x2="12" y2="18" stroke="var(--line)" stroke-width="1"/></svg>
       <span class="icon-label">concept.txt</span>
     </div>
 
-    <div class="icon" data-window="win-attack" role="button" tabindex="0" aria-label="Open invoice_final.pdf" style="left:22%; top:30%;">
+    <div class="icon cursor-target" data-window="win-attack" role="button" tabindex="0" aria-label="Open invoice_final.pdf" style="left:22%; top:30%;">
       <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><circle cx="15" cy="19" r="3.4" fill="var(--crimson)"/></svg>
       <span class="icon-label">invoice_final.pdf</span>
     </div>
@@ -68,12 +69,12 @@
       <span class="icon-label">agent_3_emailer</span>
     </div>
 
-    <div class="icon" data-window="win-benchmark" role="button" tabindex="0" aria-label="Open benchmark_results.csv" style="left:76%; top:12%;">
+    <div class="icon cursor-target" data-window="win-benchmark" role="button" tabindex="0" aria-label="Open benchmark_results.csv" style="left:76%; top:12%;">
       <svg class="icon-glyph" viewBox="0 0 20 24" fill="none"><path d="M2 1.5h9l5 5v16a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/><path d="M11 1.5v5h5" stroke="var(--line)" stroke-width="1.2"/><rect x="4" y="12" width="2.4" height="6" fill="none" stroke="var(--line)" stroke-width="1"/><rect x="7.5" y="9" width="2.4" height="9" fill="none" stroke="var(--line)" stroke-width="1"/><rect x="11" y="14" width="2.4" height="4" fill="none" stroke="var(--line)" stroke-width="1"/></svg>
       <span class="icon-label">benchmark_results.csv</span>
     </div>
 
-    <div class="icon" data-href="https://github.com/Kallmeru/Swarms" role="button" tabindex="0" aria-label="Open source repository on GitHub" style="left:74%; top:58%;">
+    <div class="icon cursor-target" data-href="https://github.com/Kallmeru/Swarms" role="button" tabindex="0" aria-label="Open source repository on GitHub" style="left:74%; top:58%;">
       <svg class="icon-glyph" viewBox="0 0 24 20" fill="none"><path d="M1 4.5c0-.83.67-1.5 1.5-1.5h6l1.8 2H21.5c.83 0 1.5.67 1.5 1.5V17c0 .83-.67 1.5-1.5 1.5h-19C1.67 18.5 1 17.83 1 17V4.5z" fill="var(--panel)" stroke="var(--line)" stroke-width="1.2"/></svg>
       <span class="icon-label">source/</span>
     </div>
@@ -97,10 +98,14 @@
       <span class="window-title">invoice_final.pdf, opened by agent_1_reader</span>
     </div>
     <div class="window-body">
+      <div class="attack-wheel-row">
+        <span class="attack-wheel-label">Attack</span>
+        <div id="attackWheel"></div>
+      </div>
       <div class="controls">
-        <label for="attackPicker">Attack</label>
+        <label for="attackPicker" class="decrypt-sr-only">Attack (native fallback for keyboard and screen readers)</label>
         <select id="attackPicker"></select>
-        <button id="playBtn">Run Attack</button>
+        <button id="playBtn" class="cursor-target">Run Attack</button>
         <span id="loadError" class="load-error"></span>
       </div>
 
@@ -135,14 +140,15 @@
   <footer class="taskbar">
     <span class="taskbar-brand">SWARMS_<span class="cursor"></span></span>
     <nav class="taskbar-links">
-      <button type="button" data-window="win-concept">CN</button>
-      <button type="button" data-window="win-attack">ATK</button>
-      <button type="button" data-window="win-benchmark">BM</button>
-      <button type="button" data-href="https://github.com/Kallmeru/Swarms">SRC</button>
+      <button type="button" class="cursor-target" data-window="win-concept">CN</button>
+      <button type="button" class="cursor-target" data-window="win-attack">ATK</button>
+      <button type="button" class="cursor-target" data-window="win-benchmark">BM</button>
+      <button type="button" class="cursor-target" data-href="https://github.com/Kallmeru/Swarms">SRC</button>
     </nav>
   </footer>
 
 </div>
+<script src="effects.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
