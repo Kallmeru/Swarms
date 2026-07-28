@@ -147,6 +147,24 @@ fetch('data/manifest.json')
       opt.textContent = `${a.attack_id}: ${a.name} (${a.category})`;
       sel.appendChild(opt);
     });
+
+    // Visual attack picker: a curved wheel kept in sync with the real
+    // <select> above (attackPicker stays the source of truth playBtn reads
+    // from, and the fully accessible fallback for keyboard/screen readers).
+    const wheelEl = document.getElementById('attackWheel');
+    if (wheelEl && list.length && typeof initOptionWheel === 'function') {
+      const labels = list.map(a => a.attack_id);
+      const wheel = initOptionWheel(wheelEl, labels, {
+        onChange: (index) => {
+          sel.value = list[index].attack_id;
+          sel.dispatchEvent(new Event('change'));
+        },
+      });
+      sel.addEventListener('change', () => {
+        const index = list.findIndex(a => a.attack_id === sel.value);
+        if (index >= 0) wheel.select(index);
+      });
+    }
   })
   .catch(err => { loadErrorEl.textContent = `Could not load manifest.json: ${err.message}`; });
 
@@ -184,6 +202,24 @@ function tickClock() {
 tickClock();
 setInterval(tickClock, 1000);
 
+// ---------- homepage effects: dot field, target cursor, decrypt text ----------
+
+const dotFieldEl = document.getElementById('dotField');
+if (dotFieldEl && typeof initDotField === 'function') initDotField(dotFieldEl);
+
+if (typeof initTargetCursor === 'function') initTargetCursor('.cursor-target');
+
+let conceptDecrypts = null;
+if (typeof makeDecryptText === 'function') {
+  const brandTextEl = document.getElementById('brandText');
+  if (brandTextEl) makeDecryptText(brandTextEl, { trigger: 'hover', speed: 30 });
+
+  // first two paragraphs only, the third has an inline <b> tag that a plain
+  // textContent rebuild would flatten
+  conceptDecrypts = Array.from(document.querySelectorAll('#win-concept .window-body p:not(:last-child)'))
+    .map(p => makeDecryptText(p, { trigger: 'manual' }));
+}
+
 // ---------- window manager ----------
 
 const isDesktopMode = () => window.matchMedia('(min-width: 780px)').matches;
@@ -217,6 +253,9 @@ function openWindow(id) {
   if (id === 'win-attack') {
     graphOff.network.redraw();
     graphOn.network.redraw();
+  }
+  if (id === 'win-concept' && conceptDecrypts) {
+    conceptDecrypts.forEach(d => d.play());
   }
   updateTaskbarState();
 }
