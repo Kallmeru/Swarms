@@ -55,6 +55,18 @@ button { font: inherit; }
 .menubar-brand { display: flex; align-items: center; gap: 0.5rem; color: var(--crimson); font-weight: 700; }
 .menubar-glyph { width: 20px; height: 20px; }
 .menubar-right { display: flex; align-items: center; gap: 1.25rem; color: var(--ink-soft); }
+.sound-toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.2rem 0.3rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.sound-toggle:hover { opacity: 1; }
 
 /* ---------- ticker ---------- */
 

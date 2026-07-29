@@ -458,6 +458,7 @@ function initOptionWheel(container, items, options = {}) {
     const idx = Math.round(v);
     if (idx !== selected) {
       selected = idx;
+      if (window.SwarmsSound) SwarmsSound.playTick();
       if (opts.onChange) opts.onChange(idx, items[idx]);
     }
     if (reduceMotion) { pos = target; layout(); } else { startLoop(); }
