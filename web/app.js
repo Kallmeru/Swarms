@@ -68,6 +68,7 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
       statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> at ${label}`;
       statusEl.className = 'status blocked';
       reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}<br><b>Poisoned instruction:</b> "<i>${escapeHtml(evt.data.directive_requested)}</i>"`;
+      if (window.SwarmsSound) SwarmsSound.playContained();
     } else {
       const color = evt.data.data_label === 'UNTRUSTED' ? UNTRUSTED : TRUSTED;
       graph.edges.update({ id: edgeId, color, width: 3 });
@@ -79,6 +80,7 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
     graph.nodes.update({ id: 'action', color: nodeColor(BLOCKED), borderWidth: 2.5 });
     statusEl.innerHTML = `<b>WORM SUCCEEDED</b>: malicious email sent.`;
     statusEl.className = 'status leaked';
+    if (window.SwarmsSound) SwarmsSound.playWormSucceeded();
   }
 
   if (evt.type === 'ACTION_BLOCKED') {
@@ -86,6 +88,7 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
     statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> at final action`;
     statusEl.className = 'status blocked';
     reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}<br><b>Offending value:</b> "<i>${escapeHtml(evt.data.offending_span || '')}</i>"`;
+    if (window.SwarmsSound) SwarmsSound.playContained();
   }
 }
 
@@ -123,6 +126,7 @@ async function loadAttack(attackId) {
 }
 
 document.getElementById('playBtn').onclick = async () => {
+  if (window.SwarmsSound) SwarmsSound.playAttackStart();
   const attackId = document.getElementById('attackPicker').value;
   loadErrorEl.textContent = '';
   const reasonEl = document.getElementById('reason-panel');
@@ -201,6 +205,22 @@ function tickClock() {
 }
 tickClock();
 setInterval(tickClock, 1000);
+
+// ---------- sound effects: taps/clicks and the mute toggle ----------
+
+if (window.SwarmsSound) {
+  document.addEventListener('click', e => {
+    if (e.target.closest('.cursor-target, .dot-close')) SwarmsSound.playClick();
+  });
+
+  const soundToggle = document.getElementById('soundToggle');
+  const refreshSoundIcon = () => {
+    soundToggle.textContent = SwarmsSound.isMuted() ? '\u{1F507}' : '\u{1F50A}';
+    soundToggle.setAttribute('aria-label', SwarmsSound.isMuted() ? 'Unmute sound effects' : 'Mute sound effects');
+  };
+  soundToggle.addEventListener('click', () => { SwarmsSound.setMuted(!SwarmsSound.isMuted()); refreshSoundIcon(); });
+  refreshSoundIcon();
+}
 
 // ---------- homepage effects: dot field, target cursor, decrypt text ----------
 
