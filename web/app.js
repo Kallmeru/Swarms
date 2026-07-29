@@ -225,12 +225,28 @@ if (typeof makeDecryptText === 'function') {
 const isDesktopMode = () => window.matchMedia('(min-width: 780px)').matches;
 let zTop = 20;
 
+// clamp a window's CSS-derived position (percentage lefts like win-attack's
+// 26% plus a fixed width can hang off the right edge on narrower desktop
+// widths, e.g. 780-865px) so it always stays fully on screen
+function clampToViewport(rect, offset) {
+  return {
+    left: Math.max(8, Math.min(rect.left + offset, window.innerWidth - rect.width - 8)),
+    top: Math.max(8, Math.min(rect.top + offset, window.innerHeight - rect.height - 8)),
+  };
+}
+
 // invoice_final.pdf is open by default so a desktop visitor sees the demo
 // immediately. On a phone a window covers the whole screen, so open by
 // default there would hide the icon grid before anyone knows it exists,
 // closer to a phone's own "home screen of icons" habit than a page.
+const winAttackDefault = document.getElementById('win-attack');
 if (!isDesktopMode()) {
-  document.getElementById('win-attack').classList.remove('open');
+  winAttackDefault.classList.remove('open');
+} else {
+  const { left, top } = clampToViewport(winAttackDefault.getBoundingClientRect(), 0);
+  winAttackDefault.style.left = `${left}px`;
+  winAttackDefault.style.top = `${top}px`;
+  winAttackDefault.dataset.positioned = 'true';
 }
 
 function bringToFront(win) {
@@ -241,14 +257,17 @@ function bringToFront(win) {
 function openWindow(id) {
   const win = document.getElementById(id);
   if (!win) return;
+  const openCount = document.querySelectorAll('.window.open').length;
+  win.classList.add('open');
   if (isDesktopMode() && !win.dataset.positioned) {
-    const openCount = document.querySelectorAll('.window.open').length;
+    // measured after adding 'open': a display:none rect is always zero,
+    // which would collapse every window's first-open position to the corner
     const rect = win.getBoundingClientRect();
-    win.style.left = `${rect.left + openCount * 24}px`;
-    win.style.top = `${rect.top + openCount * 24}px`;
+    const { left, top } = clampToViewport(rect, openCount * 24);
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
     win.dataset.positioned = 'true';
   }
-  win.classList.add('open');
   bringToFront(win);
   if (id === 'win-attack') {
     graphOff.network.redraw();
@@ -304,7 +323,7 @@ updateTaskbarState();
 // mousedown is what stops the browser from starting a text-selection drag
 // instead of handing the gesture to us.
 function makeDraggable(handleEl, moveEl, { onStart, getBounds } = {}) {
-  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0, maxLeft = Infinity, maxTop = Infinity;
 
   handleEl.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
@@ -313,15 +332,17 @@ function makeDraggable(handleEl, moveEl, { onStart, getBounds } = {}) {
     e.preventDefault();
     startX = e.clientX; startY = e.clientY;
     const rect = moveEl.getBoundingClientRect();
-    const bounds = getBounds ? getBounds() : { left: 0, top: 0 };
+    const bounds = getBounds ? getBounds() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
     startLeft = rect.left - bounds.left;
     startTop = rect.top - bounds.top;
+    maxLeft = bounds.width - rect.width;
+    maxTop = bounds.height - rect.height;
     moveEl.classList.add('dragging');
   });
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    moveEl.style.left = `${Math.max(0, startLeft + (e.clientX - startX))}px`;
-    moveEl.style.top = `${Math.max(0, startTop + (e.clientY - startY))}px`;
+    moveEl.style.left = `${Math.max(0, Math.min(maxLeft, startLeft + (e.clientX - startX)))}px`;
+    moveEl.style.top = `${Math.max(0, Math.min(maxTop, startTop + (e.clientY - startY)))}px`;
   });
   document.addEventListener('mouseup', () => {
     dragging = false;
