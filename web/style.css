@@ -407,11 +407,12 @@ button { font: inherit; }
     overflow: visible;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    align-content: start;
     gap: 0.5rem;
     padding: 1rem 0.5rem 1.5rem;
   }
   .desktop-wallpaper { font-size: 2rem; }
-  .icon { position: static; width: auto; cursor: default; }
+  .icon { position: static; width: auto; cursor: default; touch-action: auto; }
   .icon-glyph { width: 30px; height: 34px; }
   .icon-label { font-size: 0.58rem; }
 
@@ -427,7 +428,27 @@ button { font: inherit; }
   }
   .window-wide { width: 100%; }
   .window-titlebar { cursor: default; }
+  .dot-close {
+    width: 34px;
+    height: 34px;
+    padding: 12px;
+    margin: -12px;
+    background: none;
+    position: relative;
+  }
+  .dot-close::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--crimson);
+    transform: translate(-50%, -50%);
+  }
   .split { flex-direction: column; }
   .pane:first-child { border-right: none; border-bottom: 1px solid var(--line); }
   .menubar-item:first-child { display: none; } /* keep only the clock on very small headers */
+  .taskbar-links button { padding: 0.6rem 0.8rem; }
 }
