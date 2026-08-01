@@ -1,5 +1,21 @@
 # SWARMS — final status before Tech Fest
 
+**Update: PR #13 and #14 are merged into `main`.** The real 8-attack benchmark, mobile fixes, and sound effects are all live. This doc's newest addition is below: Ablaze's scanner work is now properly integrated with safe credential handling.
+
+## `attack_lab/` — Ablaze's scanner, integrated safely
+
+Brought Ablaze's prompt-injection scanner/sanitizer/alerting code into `main` as its own `attack_lab/` package, alongside `swarm/` and `core/`, still deliberately *not* wired into the live demo path (see below for why). What changed from the original branch:
+
+- **The leaked `.env` was never brought over.** Only the code came in. Added `.env.example` at the project root instead, real values, no secrets, ever.
+- **Replaced `test_env.py`**, which printed the raw API key and SMTP user to stdout (that's a second, independent secrets-hygiene problem beyond the committed `.env`, printing to a terminal or CI log is its own leak vector). New version (`attack_lab/check_env.py`) reports which vars are set as booleans only, never the values.
+- **Added `attack_lab/test_scanner.py`**, a real self-check that runs the scanner and sanitizer against a known-malicious string and a benign one, with zero API key or network dependency, `python -m attack_lab.test_scanner`. This is genuinely working code today, not blocked on any credential.
+- **Added a root `requirements.txt`** so `python-dotenv`, `requests`, etc. are installable in one place.
+- Main's `.gitignore` already correctly excludes `.env` and `__pycache__/` (this repo's root `.gitignore` was never the corrupted one, only Ablaze's own branch copy was), so nothing needed fixing there.
+
+**What I still cannot do**: rotate the actual leaked Gemini key and Gmail app password. That requires logging into Ablaze's Google account, which I don't have and shouldn't have. The credentials are still live until Ablaze does that, this integration protects `main` from ever containing them and gives everyone a safe way to run the scanner with their own key, but it doesn't revoke the old one. Please confirm that's been done.
+
+**Why this still isn't wired into the live demo**: the scanner/sanitizer core (regex-based, `scan_text` + `basic_sanitize`) has zero external dependency and could be wired in safely. The optional LLM-rewrite and email-alert features need a real Gemini key and real SMTP credentials respectively, either one being slow, rate-limited, or down during a live presentation would break the demo. Keeping it as a standalone, presentable-on-its-own module (with a passing offline self-check) is the safer call for tech fest day. Wiring the regex-only scanner in as a non-blocking, informational overlay is a reasonable next step, just not one to make hours before presenting.
+
 ## What got built in this pass (closes the last real gap)
 
 - **`swarm/` package now exists**: `swarm/agents.py` (reader/analyst/emailer functions), `swarm/run_swarm.py` (the exact `run_swarm(attack, shield_enabled, run_id)` function `benchmark/run_benchmark.py` was always waiting on), and 8 attack fixtures in `swarm/attacks/` covering direct override, multi-hop redirect, credential exfiltration, HTML/script injection, base64 obfuscation, role override, shell command injection, and a fake system message.
@@ -12,7 +28,7 @@
 
 1. **Still urgent**: rotate the leaked Gemini API key and Gmail app password from `Ablaze-(Agents)`'s `.env` (flagged in the previous status doc). I have not touched that branch, I can't rotate credentials that aren't mine, and I'm not force-pushing over someone else's branch. Please confirm this actually happened.
 2. **`Paru-(Core)` branch**: still diverged (dict-based `authorize()`, different logger API, missing `web/`/`benchmark/`/`docs/`). I did *not* merge it or touch it — the `swarm/` layer above is built entirely on the version of `core/` already on `main`, which is Paru's own original fix, already verified and live. Recommendation: Paru should pull `main` going forward rather than trying to merge the old branch state back in; there's nothing left to reconcile if the old branch is just abandoned in favor of `main`.
-3. **Ablaze's scanner/sanitizer/alerting code** (`agents.py`, `scanner_rules.py`, `sanitizers.py`, `llm_client.py`) is solid standalone work but is *deliberately not wired into the live demo path*. It depends on a live Gemini API call and a real SMTP send, both are things that can fail, lag, or hang during a live presentation. Worth mentioning verbally as a second layer the team explored, not something to run on stage.
+3. **Ablaze's scanner/sanitizer/alerting code** now lives at `attack_lab/` on `main`, properly integrated with safe credential handling (see the section above). Still *deliberately not wired into the live demo path*: the optional LLM-rewrite and email-alert features depend on a live Gemini API call and a real SMTP send, both are things that can fail, lag, or hang during a live presentation. Worth mentioning verbally as a second layer the team explored, not something to run on stage.
 4. `core/llm_client.py` is intentionally still a stub. Nothing in the demo path calls out to an LLM or any external API, on purpose: the whole thing is deterministic and works with no network dependency, so nothing can flake during the presentation.
 
 ## This needs a merge before any of it is live
