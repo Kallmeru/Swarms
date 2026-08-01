@@ -22,7 +22,10 @@
     osc.type = type;
     osc.frequency.setValueAtTime(freq, audio.currentTime);
     if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, audio.currentTime + duration);
-    g.gain.setValueAtTime(gain, audio.currentTime);
+    // a few ms attack ramp avoids an audible "pop" from jumping straight to
+    // full gain, then decay over the rest of the duration
+    g.gain.setValueAtTime(0.0001, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(gain, audio.currentTime + 0.006);
     g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration);
     osc.connect(g).connect(audio.destination);
     osc.start();
@@ -30,14 +33,14 @@
   }
 
   window.SwarmsSound = {
-    playClick() { tone(1100, 0.05, { type: 'square', gain: 0.05 }); },
-    playTick() { tone(900, 0.03, { type: 'sine', gain: 0.03 }); },
-    playAttackStart() { tone(220, 0.16, { type: 'sawtooth', gain: 0.06, sweepTo: 560 }); },
+    playClick() { tone(1100, 0.07, { type: 'square', gain: 0.16 }); },
+    playTick() { tone(900, 0.05, { type: 'square', gain: 0.11 }); },
+    playAttackStart() { tone(220, 0.18, { type: 'sawtooth', gain: 0.16, sweepTo: 560 }); },
     playContained() {
-      tone(660, 0.09, { type: 'sine', gain: 0.06 });
-      setTimeout(() => tone(880, 0.12, { type: 'sine', gain: 0.06 }), 90);
+      tone(660, 0.1, { type: 'square', gain: 0.14 });
+      setTimeout(() => tone(880, 0.14, { type: 'square', gain: 0.14 }), 90);
     },
-    playWormSucceeded() { tone(320, 0.3, { type: 'sawtooth', gain: 0.08, sweepTo: 140 }); },
+    playWormSucceeded() { tone(320, 0.32, { type: 'sawtooth', gain: 0.2, sweepTo: 140 }); },
     isMuted: () => muted,
     setMuted(value) {
       muted = value;
