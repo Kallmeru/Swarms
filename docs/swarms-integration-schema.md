@@ -1,5 +1,7 @@
 # SWARMS: Integration Contract (v1)
 
+**Status: resolved.** `swarm/run_swarm.py` now exists on `main` and implements this contract (with a slightly simpler attack schema than Part 3 originally sketched, see `docs/swarms-status-and-directions.md` for the current state and what changed). Gaps 1-3 from Part 2 were applied and verified back when the shield toggle got fixed. Kept below as the historical record of the reasoning, the open questions at the bottom are stale, don't act on them.
+
 This replaces the schema section of the earlier per-person briefs. It's grounded in what's actually in the repo right now, not the original hypothetical plan, so there's no guessing left for anyone. Forward this whole file to Paru and Ablaze.
 
 Three things are pinned down here:

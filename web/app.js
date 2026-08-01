@@ -87,7 +87,8 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
     graph.edges.update({ id: 'e_a3_act', color: BLOCKED, width: 3, dashes: [6, 4] });
     statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> at final action`;
     statusEl.className = 'status blocked';
-    reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}<br><b>Offending value:</b> "<i>${escapeHtml(evt.data.offending_span || '')}</i>"`;
+    reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}` +
+      (evt.data.offending_span ? `<br><b>Offending value:</b> "<i>${escapeHtml(evt.data.offending_span)}</i>"` : '');
     if (window.SwarmsSound) SwarmsSound.playContained();
   }
 }
