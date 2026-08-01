@@ -173,30 +173,42 @@ fetch('data/manifest.json')
   })
   .catch(err => { loadErrorEl.textContent = `Could not load manifest.json: ${err.message}`; });
 
+// Constructing Chart.js against a canvas that's still display:none (the
+// window hasn't been opened yet) leaves it permanently stuck at 0x0, even a
+// later resize() can't recover it, only building a fresh instance does. So
+// this waits for the data AND builds the chart lazily on first open instead
+// of at page load.
+let benchmarkChart = null;
+let benchmarkSummary = null;
 fetch('data/benchmark_summary.json')
   .then(r => r.json())
-  .then(summary => {
-    new Chart(document.getElementById('benchmarkChart'), {
-      type: 'bar',
-      data: {
-        labels: ['Shield OFF', 'Shield ON'],
-        datasets: [{
-          label: `Malicious action success rate (n=${summary.total_attacks})`,
-          data: [summary.shield_off_success_rate * 100, summary.shield_on_success_rate * 100],
-          backgroundColor: [BLOCKED, TRUSTED],
-          borderRadius: 4,
-        }],
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', color: '#A0917E' }, grid: { color: 'rgba(243,231,211,0.12)' } },
-          x: { ticks: { color: '#A0917E' }, grid: { display: false } },
-        },
-        plugins: { legend: { display: false } },
-      },
-    });
-  })
+  .then(summary => { benchmarkSummary = summary; ensureBenchmarkChart(); })
   .catch(err => { loadErrorEl.textContent = `Could not load benchmark_summary.json: ${err.message}`; });
+
+function ensureBenchmarkChart() {
+  if (benchmarkChart || !benchmarkSummary) return;
+  const canvas = document.getElementById('benchmarkChart');
+  if (canvas.getBoundingClientRect().width === 0) return; // still hidden, openWindow() will call this again once it's actually visible
+  benchmarkChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['Shield OFF', 'Shield ON'],
+      datasets: [{
+        label: `Malicious action success rate (n=${benchmarkSummary.total_attacks})`,
+        data: [benchmarkSummary.shield_off_success_rate * 100, benchmarkSummary.shield_on_success_rate * 100],
+        backgroundColor: [BLOCKED, TRUSTED],
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', color: '#A0917E' }, grid: { color: 'rgba(243,231,211,0.12)' } },
+        x: { ticks: { color: '#A0917E' }, grid: { display: false } },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
 
 // ---------- menu bar clock ----------
 
@@ -293,6 +305,9 @@ function openWindow(id) {
   if (id === 'win-attack') {
     graphOff.network.redraw();
     graphOn.network.redraw();
+  }
+  if (id === 'win-benchmark') {
+    ensureBenchmarkChart();
   }
   if (id === 'win-concept' && conceptDecrypts) {
     conceptDecrypts.forEach(d => d.play());

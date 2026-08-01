@@ -273,6 +273,7 @@ button { font: inherit; }
 .reason-panel:empty { display: none; }
 
 .benchmark-note { color: var(--ink-soft); font-size: 0.72rem; margin-bottom: 1rem; }
+.benchmark-chart-wrap { position: relative; height: 220px; }
 
 /* ---------- taskbar ---------- */
 
