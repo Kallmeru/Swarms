@@ -52,7 +52,7 @@ button { font: inherit; }
   font-size: 0.75rem;
   letter-spacing: 0.03em;
 }
-.menubar-brand { display: flex; align-items: center; gap: 0.5rem; color: var(--crimson); font-weight: 700; }
+.menubar-brand { display: flex; align-items: center; gap: 0.5rem; color: var(--crimson); font-weight: 700; text-decoration: none; }
 .menubar-glyph { width: 20px; height: 20px; }
 .menubar-right { display: flex; align-items: center; gap: 1.25rem; color: var(--ink-soft); }
 .sound-toggle {
@@ -464,4 +464,82 @@ button { font: inherit; }
   .pane:first-child { border-right: none; border-bottom: 1px solid var(--line); }
   .menubar-item:first-child { display: none; } /* keep only the clock on very small headers */
   .taskbar-links button { padding: 0.6rem 0.8rem; }
+}
+
+/* ---------- dashboard (index.html): landing page in front of the OS ---------- */
+
+.dash { min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+.menubar-right a { color: inherit; text-decoration: none; }
+.menubar-right a:hover { color: var(--cream); }
+
+.dash-main {
+  flex: 1 1 auto;
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.dash-hero { text-align: center; margin-bottom: 3rem; }
+.dash-kicker { color: var(--ink-soft); font-size: 0.72rem; letter-spacing: 0.12em; margin: 0 0 0.75rem; }
+.dash-hero h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 1rem; line-height: 1.3; }
+.dash-pitch { color: var(--ink-soft); font-size: 0.95rem; max-width: 60ch; margin: 0 auto 2rem; line-height: 1.7; }
+
+.dash-cta-row { display: flex; gap: 0.9rem; justify-content: center; flex-wrap: wrap; }
+.dash-cta-primary {
+  background: var(--crimson); color: var(--bg); font-weight: 700; text-decoration: none;
+  padding: 0.75rem 1.4rem; border-radius: 4px; border: 1px solid var(--crimson); font-size: 0.85rem; letter-spacing: 0.03em;
+}
+.dash-cta-primary:hover { background: #e2664f; }
+.dash-cta-secondary {
+  color: var(--cream); text-decoration: none; border: 1px solid var(--line);
+  padding: 0.75rem 1.4rem; border-radius: 4px; font-size: 0.85rem; letter-spacing: 0.03em;
+}
+.dash-cta-secondary:hover { border-color: var(--cream); }
+
+.dash-stats { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3.5rem; }
+.dash-stat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 1.1rem 1.4rem; min-width: 150px; text-align: center;
+}
+.dash-stat-value { display: block; font-size: 1.8rem; font-weight: 700; color: var(--cream); }
+.dash-stat-bad .dash-stat-value { color: var(--crimson); }
+.dash-stat-good .dash-stat-value { color: var(--sage); }
+.dash-stat-label { display: block; font-size: 0.68rem; color: var(--ink-soft); letter-spacing: 0.03em; margin-top: 0.3rem; }
+
+.dash-concept, .dash-contributors { margin-bottom: 3.5rem; }
+.dash-concept h2, .dash-contributors h2 {
+  font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft);
+  margin: 0 0 1.5rem; text-align: center; font-weight: 600;
+}
+.dash-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.dash-step { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; }
+.dash-step-num {
+  display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em;
+  border: 1.5px solid var(--crimson); color: var(--crimson); border-radius: 50%; font-weight: 700; font-size: 0.8rem; margin-bottom: 0.75rem;
+}
+.dash-step h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.dash-step p { margin: 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.6; }
+
+.dash-contributor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.dash-contributor {
+  display: flex; flex-direction: column; gap: 0.3rem; text-decoration: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem;
+  transition: border-color 0.15s ease;
+}
+.dash-contributor:hover { border-color: var(--crimson); }
+.dash-contributor-name { color: var(--cream); font-weight: 700; font-size: 0.95rem; }
+.dash-contributor-role { color: var(--ink-soft); font-size: 0.72rem; }
+.dash-contributor-handle { color: var(--crimson); font-size: 0.72rem; }
+
+.dash-footer {
+  flex: 0 0 auto; text-align: center; padding: 1.25rem; color: var(--ink-soft);
+  font-size: 0.72rem; border-top: 1px solid var(--line);
+}
+
+@media (max-width: 700px) {
+  .dash-steps, .dash-contributor-grid { grid-template-columns: 1fr; }
+  .dash-stats { flex-direction: column; align-items: stretch; }
 }
