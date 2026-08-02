@@ -237,6 +237,19 @@ button { font: inherit; }
 .controls button:hover { background: #e2664f; }
 .load-error { color: var(--crimson); font-weight: 600; font-size: 0.72rem; }
 
+.scanner-panel {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.scanner-panel:empty { display: none; }
+.scanner-panel .scanner-flagged { color: var(--crimson); font-weight: 700; }
+.scanner-panel .scanner-clear { color: var(--sage); font-weight: 700; }
+
 .split { display: flex; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .pane { flex: 1; min-width: 260px; padding: 0.9rem 1rem; }
 .pane:first-child { border-right: 1px solid var(--line); }

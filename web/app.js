@@ -91,6 +91,24 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
       (evt.data.offending_span ? `<br><b>Offending value:</b> "<i>${escapeHtml(evt.data.offending_span)}</i>"` : '');
     if (window.SwarmsSound) SwarmsSound.playContained();
   }
+
+  // Ablaze's regex-weighted scanner, a second, independent signal on the
+  // same document. Purely informational: it doesn't affect containment,
+  // that's still entirely the capability model's job, and it fires
+  // identically from both the shield-off and shield-on event streams since
+  // it scores the same document either way, whichever arrives first wins,
+  // that's fine since the content is the same.
+  if (evt.type === 'SCANNER_RESULT') {
+    const panel = document.getElementById('scanner-panel');
+    if (panel) {
+      const pct = Math.round(evt.data.score * 100);
+      const verdict = evt.data.flagged
+        ? '<span class="scanner-flagged">FLAGGED</span>'
+        : '<span class="scanner-clear">not flagged</span>';
+      const matches = evt.data.findings.length ? ` &middot; matched: ${evt.data.findings.map(escapeHtml).join(', ')}` : ' &middot; no rule matched';
+      panel.innerHTML = `<b>Attack-lab scanner:</b> score ${pct}% &middot; ${verdict}${matches}`;
+    }
+  }
 }
 
 function escapeHtml(str) {
@@ -132,6 +150,7 @@ document.getElementById('playBtn').onclick = async () => {
   loadErrorEl.textContent = '';
   const reasonEl = document.getElementById('reason-panel');
   reasonEl.innerHTML = '';
+  document.getElementById('scanner-panel').innerHTML = '';
   try {
     const { offEvents, onEvents } = await loadAttack(attackId);
     playSequence(offEvents, graphOff, document.getElementById('status-off'), reasonEl, 650);

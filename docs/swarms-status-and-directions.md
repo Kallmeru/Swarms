@@ -2,6 +2,8 @@
 
 **Update: PR #13 and #14 are merged into `main`.** The real 8-attack benchmark, mobile fixes, and sound effects are all live. This doc's newest addition is below: Ablaze's scanner work is now properly integrated with safe credential handling.
 
+**Second update: the scanner core is now wired live into the demo**, not just sitting in the repo. `swarm/agents.py`'s reader step calls `attack_lab.scanner_rules.scan_text` on every attack document and the frontend shows the score next to the graphs. Every mention below of "not wired into the live demo path" refers only to the *optional* LLM-rewrite and email-alert features, which still need real external credentials and stay disconnected on purpose. See `docs/tech-fest-briefing.md` for how to talk about this.
+
 ## `attack_lab/` — Ablaze's scanner, integrated safely
 
 Brought Ablaze's prompt-injection scanner/sanitizer/alerting code into `main` as its own `attack_lab/` package, alongside `swarm/` and `core/`, still deliberately *not* wired into the live demo path (see below for why). What changed from the original branch:

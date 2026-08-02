@@ -28,6 +28,8 @@ On the desktop:
 - **benchmark_results.csv** — a live chart of real aggregate results across all 8 attacks (see below).
 - **source/** — links to the GitHub repo.
 
+Above the graphs, a second panel shows **Ablaze's regex-weighted scanner** (`attack_lab/`) independently scoring the same document, e.g. "score 70% · FLAGGED · matched: url_or_html, shell_cmd". This runs live for every attack, it's a second, independent detection signal, and it's honest about its own limits: it flags 2 of the 8 attacks strongly, partially scores 2 more, and misses 4 entirely (score 0%), while the capability model still contains all 8 regardless. That contrast is worth pointing out on purpose, not glossed over, see below.
+
 ## The results (real, not illustrative)
 
 Every one of the 8 attacks was actually run through the real pipeline, twice each (shield off, shield on), and logged:
@@ -43,17 +45,19 @@ That's the headline number: 8 structurally different attack styles, one mechanis
 - **`swarm/`** — the demo swarm itself: three agent functions (reader/analyst/emailer) wrapped by `core/`'s runtime, plus 8 attack scenario fixtures, plus the one integration function (`run_swarm`) that runs an attack under a given shield mode and reports the outcome.
 - **`benchmark/`** — loops every attack fixture through the swarm twice (off/on), writes the results CSV and every JSON file the frontend reads. This is what actually produced the 8/8 vs 0/8 numbers, not hand-written sample data.
 - **`web/`** — the frontend: the desktop simulation, the animated graph visualization (vis-network), the benchmark chart (Chart.js), synthesized UI sound effects (Web Audio API, no audio files), and now the dashboard homepage. Fully static, no backend server, reads pre-generated JSON.
-- **`attack_lab/`** — a separate prompt-injection scanner/sanitizer prototype (regex-weighted pattern scoring, optional LLM-assisted rewrite, optional email alerting). Deliberately not wired into the live demo, see below for why, and how to talk about it.
+- **`attack_lab/`** — Ablaze's prompt-injection scanner/sanitizer prototype (regex-weighted pattern scoring, optional LLM-assisted rewrite, optional email alerting). The scanner core (`scan_text`, zero dependencies) is wired live into `swarm/agents.py`'s reader step and shown in the demo, informational only, it doesn't affect containment. The optional LLM-rewrite and email-alert features stay disconnected, see below for why.
 
 Nothing in the live demo path calls an external API or network service. That's on purpose: it's fully deterministic and offline, nothing can flake, time out, or rate-limit during a live presentation.
 
 ## Team, accurate attribution
 
 - **Paru** ([@Kallmeru](https://github.com/Kallmeru)) — Core / Policy Engine. Built the taint model, the capability model, and the policy engine, the actual security mechanism the whole demo rests on.
-- **Ablaze** ([@Ablaze005](https://github.com/Ablaze005)) — Agent Swarm / Attack Lab. Built a standalone prompt-injection scanner and sanitizer (`attack_lab/`), a second, independent detection strategy explored alongside the taint/capability model.
-- **Dipesh** ([@dipeshrayg](https://github.com/dipeshrayg)) — Front-End / Systems. Built the frontend, the swarm integration layer and the 8 attack scenarios, the benchmark pipeline, and the dashboard.
+- **Ablaze** ([@Ablaze005](https://github.com/Ablaze005)) — Agent Swarm / Attack Lab. Built the prompt-injection scanner and sanitizer (`attack_lab/`), a second, independent detection strategy that runs live in the demo alongside the taint/capability model.
+- **Dipesh** ([@dipeshrayg](https://github.com/dipeshrayg)) — Front-End / Systems. Built the frontend, the swarm integration layer and the 8 attack scenarios, the benchmark pipeline, the dashboard, and wired the scanner into the live event stream.
 
-**If a judge asks about the scanner**: it's real, working code (regex-based detection needs no API key and has its own passing test), explored as a second layer alongside taint tracking. It's not wired into the live demo because its optional features (LLM-assisted rewriting, email alerts) depend on live external services, a reasonable call to keep the on-stage demo deterministic, not a limitation of the idea itself. Good, honest answer to "what would you build next": integrating the two, so a scanner score becomes a diagnostic overlay on top of the structural guarantee, not a replacement for it.
+**If a judge asks about the scanner**: it's real, working code (regex-based detection needs no API key and has its own passing test), running live as a second, informational layer next to taint tracking, it scores every document but never affects containment. Its optional features (LLM-assisted rewriting, email alerts) stay disconnected on purpose, they depend on live external services, not worth risking on stage. Good, honest answer to "what would you build next": using the scanner score to *prioritize* review rather than just display it, still never as a replacement for the structural guarantee.
+
+**If a judge asks why the scanner missed 4 of the 8 attacks**: that's the whole point of showing both side by side. Regex-based detection depends on matching a phrasing it already knows, it will always miss something a determined attacker phrases differently. Capability attenuation doesn't care how the instruction was phrased, it contained all 8 regardless of what the scanner said. That contrast is the strongest argument for why SWARMS is a structural guarantee, not a smarter filter.
 
 **If a judge asks who wrote the 8 attack scenarios**: they were written to exercise the containment mechanism across a spread of real-world prompt-injection styles (direct override, multi-hop, exfiltration, HTML/script injection, encoding tricks, role override, shell commands, fake system messages), same underlying mechanism (capability attenuation), eight different ways an attacker might try to phrase it.
 
