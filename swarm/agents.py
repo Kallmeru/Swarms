@@ -6,6 +6,7 @@ swarm/attacks/, instead of hardcoding one document like Demo.py does.
 """
 from core.taint import TaintedValue, TaintLabel
 from core.logger import log_event
+from attack_lab.scanner_rules import scan_text
 
 
 def make_reader_agent(document_text: str):
@@ -19,6 +20,19 @@ def make_reader_agent(document_text: str):
             "agent": "agent1_reader", "tool": "read_document",
             "label": result.label.value.upper(), "preview": document_text[:200],
         })
+
+        # a second, independent detection signal alongside taint tracking:
+        # Ablaze's regex-weighted scanner scores the same document. Purely
+        # informational, doesn't affect containment, that's still entirely
+        # the capability model's job.
+        scan = scan_text(document_text)
+        log_event("SCANNER_RESULT", {
+            "agent": "agent1_reader",
+            "score": round(scan["score"], 2),
+            "flagged": scan["score"] >= 0.6,
+            "findings": [f["id"] for f in scan["findings"]],
+        })
+
         return result
     return reader_agent
 
