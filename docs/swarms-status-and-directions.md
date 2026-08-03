@@ -2,7 +2,9 @@
 
 **Update: PR #13 and #14 are merged into `main`.** The real 8-attack benchmark, mobile fixes, and sound effects are all live. This doc's newest addition is below: Ablaze's scanner work is now properly integrated with safe credential handling.
 
-**Second update: the scanner core is now wired live into the demo**, not just sitting in the repo. `swarm/agents.py`'s reader step calls `attack_lab.scanner_rules.scan_text` on every attack document and the frontend shows the score next to the graphs. Every mention below of "not wired into the live demo path" refers only to the *optional* LLM-rewrite and email-alert features, which still need real external credentials and stay disconnected on purpose. See `docs/tech-fest-briefing.md` for how to talk about this.
+**Second update: the scanner core is now wired live into the demo**, not just sitting in the repo. `swarm/agents.py`'s reader step calls `attack_lab.scanner_rules.scan_text` on every attack document and the frontend shows the score next to the graphs. Every mention below of "not wired into the live demo path" refers only to the *optional* LLM-rewrite feature and the real SMTP send, which still need real external credentials and stay disconnected on purpose. See `docs/tech-fest-briefing.md` for how to talk about this.
+
+**Third update: the alert email is now shown too, as a preview.** When a document is flagged, the demo shows exactly what `ScannerAgent.send_alert()` would have emailed, real subject and body built from the actual attack, using safe placeholder addresses (`security@example.com` / `swarms@example.com`, from `attack_lab.config.Config()`'s defaults since no real `.env` exists in the deploy environment). Clearly labeled "preview, not sent". It can't actually send: the live site is static, there's no backend to receive a "run attack" request and open an SMTP connection when a judge clicks the button, and Ablaze's real credentials are the ones that leaked (still unconfirmed whether they've been rotated), so nothing here depends on them.
 
 ## `attack_lab/` — Ablaze's scanner, integrated safely
 

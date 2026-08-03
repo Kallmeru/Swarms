@@ -250,6 +250,35 @@ button { font: inherit; }
 .scanner-panel .scanner-flagged { color: var(--crimson); font-weight: 700; }
 .scanner-panel .scanner-clear { color: var(--sage); font-weight: 700; }
 
+.alert-preview {
+  margin-bottom: 1rem;
+  border: 1px solid var(--ochre);
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 0.72rem;
+}
+.alert-preview:empty { display: none; }
+.alert-preview-header {
+  background: var(--titlebar);
+  padding: 0.4rem 0.75rem;
+  color: var(--ochre);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.alert-preview-meta { padding: 0.6rem 0.75rem 0; color: var(--ink-soft); line-height: 1.7; }
+.alert-preview-meta b { color: var(--cream); }
+.alert-preview-body {
+  margin: 0.5rem 0.75rem 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--cream);
+  font-family: inherit;
+}
+
 .split { display: flex; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .pane { flex: 1; min-width: 260px; padding: 0.9rem 1rem; }
 .pane:first-child { border-right: 1px solid var(--line); }

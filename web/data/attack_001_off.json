@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": 1785693631.7623923,
+    "timestamp": 1785747374.2658508,
     "run_id": "attack_001_off",
     "type": "AGENT_START",
     "agent": "agent1_reader",
@@ -14,7 +14,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7625916,
+    "timestamp": 1785747374.2665322,
     "run_id": "attack_001_off",
     "type": "TOOL_CALL",
     "agent": "agent1_reader",
@@ -30,7 +30,7 @@
     }
   },
   {
-    "timestamp": 1785693631.762763,
+    "timestamp": 1785747374.266943,
     "run_id": "attack_001_off",
     "type": "TOOL_RESULT",
     "agent": "agent1_reader",
@@ -42,7 +42,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7629192,
+    "timestamp": 1785747374.267357,
     "run_id": "attack_001_off",
     "type": "SCANNER_RESULT",
     "agent": "agent1_reader",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7630243,
+    "timestamp": 1785747374.267673,
     "run_id": "attack_001_off",
     "type": "AGENT_END",
     "agent": "agent1_reader",
@@ -65,7 +65,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7631314,
+    "timestamp": 1785747374.2686093,
     "run_id": "attack_001_off",
     "type": "AGENT_HANDOFF",
     "agent": "agent1_reader",
@@ -76,7 +76,7 @@
     }
   },
   {
-    "timestamp": 1785693631.763226,
+    "timestamp": 1785747374.2692301,
     "run_id": "attack_001_off",
     "type": "AGENT_START",
     "agent": "agent2_analyst",
@@ -90,7 +90,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7633195,
+    "timestamp": 1785747374.269669,
     "run_id": "attack_001_off",
     "type": "AGENT_END",
     "agent": "agent2_analyst",
@@ -101,7 +101,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7634213,
+    "timestamp": 1785747374.269816,
     "run_id": "attack_001_off",
     "type": "AGENT_HANDOFF",
     "agent": "agent2_analyst",
@@ -112,7 +112,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7635167,
+    "timestamp": 1785747374.2699242,
     "run_id": "attack_001_off",
     "type": "AGENT_START",
     "agent": "agent3_emailer",
@@ -126,7 +126,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7636077,
+    "timestamp": 1785747374.270052,
     "run_id": "attack_001_off",
     "type": "AGENT_END",
     "agent": "agent3_emailer",
@@ -137,7 +137,7 @@
     }
   },
   {
-    "timestamp": 1785693631.7637293,
+    "timestamp": 1785747374.2701766,
     "run_id": "attack_001_off",
     "type": "ACTION_ALLOWED",
     "agent": "agent3_emailer",
@@ -148,7 +148,7 @@
     }
   },
   {
-    "timestamp": 1785693631.763831,
+    "timestamp": 1785747374.2702816,
     "run_id": "attack_001_off",
     "type": "TOOL_RESULT",
     "agent": "agent3_emailer",
