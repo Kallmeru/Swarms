@@ -18,7 +18,7 @@ def run_swarm(attack: dict, shield_enabled: bool, run_id: str) -> dict:
     set_shield_enabled(shield_enabled)
     set_current_run(run_id)
 
-    reader = AgentRuntime(make_reader_agent(attack["document_text"]), Capability(can_email=True), "agent1_reader")
+    reader = AgentRuntime(make_reader_agent(attack["document_text"], attack["attack_id"]), Capability(can_email=True), "agent1_reader")
     analyst = AgentRuntime(analyst_agent, Capability(), "agent2_analyst")
     emailer = AgentRuntime(make_emailer_agent(attack["target_email"]), Capability(can_email=True), "agent3_emailer")
 

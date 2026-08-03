@@ -109,6 +109,21 @@ function applyEvent(evt, graph, statusEl, reasonEl) {
       panel.innerHTML = `<b>Attack-lab scanner:</b> score ${pct}% &middot; ${verdict}${matches}`;
     }
   }
+
+  // What Ablaze's ScannerAgent.send_alert() would have emailed for this
+  // flagged attack, real subject/body, real attack details, but never
+  // actually sent: the live site is static (no backend to send from when a
+  // visitor clicks Run Attack), and using real SMTP credentials in a public
+  // demo isn't something to depend on. Same fires-from-both-streams note as
+  // SCANNER_RESULT above applies here.
+  if (evt.type === 'SCANNER_ALERT_PREVIEW') {
+    const el = document.getElementById('alert-preview');
+    if (el) {
+      el.innerHTML = `<div class="alert-preview-header">Alert email &mdash; preview, not sent</div>` +
+        `<div class="alert-preview-meta"><b>To:</b> ${escapeHtml(evt.data.to)}<br><b>From:</b> ${escapeHtml(evt.data.from)}<br><b>Subject:</b> ${escapeHtml(evt.data.subject)}</div>` +
+        `<div class="alert-preview-body">${escapeHtml(evt.data.body)}</div>`;
+    }
+  }
 }
 
 function escapeHtml(str) {
@@ -151,6 +166,7 @@ document.getElementById('playBtn').onclick = async () => {
   const reasonEl = document.getElementById('reason-panel');
   reasonEl.innerHTML = '';
   document.getElementById('scanner-panel').innerHTML = '';
+  document.getElementById('alert-preview').innerHTML = '';
   try {
     const { offEvents, onEvents } = await loadAttack(attackId);
     playSequence(offEvents, graphOff, document.getElementById('status-off'), reasonEl, 650);
