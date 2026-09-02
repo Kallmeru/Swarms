@@ -1,3 +1,62 @@
+# SWARMS - status
+
+**Update (2026-09-02): the prototype is now a running product.** Everything
+below this section is the history that got us here and is left as written.
+What changed in this pass:
+
+- **A backend exists.** `server/` is a FastAPI app serving both the JSON API
+  and the frontend. The site is no longer limited to replaying pre-generated
+  JSON: it detects a backend and runs the pipeline on demand, including on
+  documents a visitor types into the new `live_console` window. With no
+  backend it falls back to replay, so the static Pages deploy is unaffected.
+
+- **The policy engine stopped blocking legitimate work.** Previously
+  `drop_capability()` zeroed every capability at every handoff, so agent 3
+  could never send email, benign or not. Containment was 100% and utility was
+  0%, which is a mute button, not a defense. Policy now checks two rules:
+  authority (does the agent hold it, and did the human's task authorize it)
+  and grounding (does every *control* argument trace to trusted data). Data
+  arguments, an email body quoting the document, may be untrusted. Result:
+  40/40 attacks contained, 7/7 legitimate tasks still complete, 0 false
+  positives.
+
+- **Run state moved to contextvars.** `SHIELD_ENABLED` and the logger's run
+  id were module globals. Under a server, two concurrent requests would
+  interleave their events and one request's shield setting would silently
+  apply to the other. That failure is invisible: every response still looks
+  plausible. There is a test for it now.
+
+- **The corpus grew from 8 fixtures to 48**: 40 attacks across 15 categories
+  (added delimiter confusion, unicode and homoglyph obfuscation, forged
+  tool-call JSON, citation laundering, social engineering, worm
+  self-propagation, unauthorized-action attempts) plus 8 benign controls,
+  which is what makes the false-positive number measurable at all.
+
+- **`core/llm_client.py` is real.** It was a three-line stub that echoed its
+  prompt. It now talks to Groq, OpenAI, or Gemini, off by default. Set
+  `SWARMS_LLM` and the agents run on a real model; containment does not
+  change, which is the point worth demonstrating rather than asserting.
+  `attack_lab/llm_client.py` pointed at `api.gemini.example`, an address that
+  does not exist, and now delegates to the same client.
+
+- **Tests and CI.** 142 tests covering the kernel, the pipeline and the API,
+  weighted toward failures that would otherwise be silent. CI runs them plus
+  the benchmark with `--strict`, so an attack getting through fails the build
+  instead of quietly changing a number in the README. Dockerfile runs the
+  same gate at build time.
+
+- **Docs corrected.** `docs/swarms-integration-schema.md` is now v2 and
+  describes the shipped format. `docs/tech-fest-briefing.md` no longer
+  describes capability attenuation as unconditional stripping, and states the
+  known limits up front.
+
+**Still open:** the leaked Gemini key and Gmail app password from the original
+`attack_lab` branch still need rotating by their owner. Nothing in the repo
+depends on them and `.env` has never been committed to `main`, but this
+integration cannot revoke them.
+
+---
+
 # SWARMS — final status before Tech Fest
 
 **Update: PR #13 and #14 are merged into `main`.** The real 8-attack benchmark, mobile fixes, and sound effects are all live. This doc's newest addition is below: Ablaze's scanner work is now properly integrated with safe credential handling.

@@ -1,5 +1,11 @@
 name: Deploy web/ to GitHub Pages
 
+# Pages hosts the static fallback: no backend, so the site replays the traces
+# generated here rather than running the pipeline on demand. They are
+# regenerated from the current corpus on every deploy, so what the site
+# animates is always the code that just shipped, never a stale commit of
+# web/data/.
+
 on:
   push:
     branches: [main]
@@ -22,6 +28,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # --strict: refuse to publish a site whose own benchmark says an attack
+      # got through.
+      - name: Regenerate benchmark data
+        run: python -m benchmark.run_benchmark --strict
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
