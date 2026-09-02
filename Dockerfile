@@ -33,7 +33,10 @@ RUN useradd --create-home --uid 10001 swarms && chown -R swarms /app
 USER swarms
 
 EXPOSE 8000
+# Single quotes only inside the double-quoted argument: the Dockerfile parser
+# treats backslash as its own escape character, so a nested \" is a portability
+# trap rather than a quoting fix.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD python -c "import urllib.request,os,sys; sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",8000)}/api/health', timeout=2).status==200 else 1)"
+  CMD python -c "import os,sys,urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/api/health', timeout=2)"
 
 CMD ["python", "-m", "server"]
