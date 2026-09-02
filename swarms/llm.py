@@ -21,8 +21,6 @@ import os
 import time
 from dataclasses import dataclass
 
-import requests
-
 log = logging.getLogger("swarms.llm")
 
 # Any OpenAI-compatible host works through the same code path: Groq, OpenAI,
@@ -86,17 +84,44 @@ def describe() -> dict:
         cfg = config_from_env()
     except LLMError as exc:
         return {"enabled": False, "provider": "invalid", "error": str(exc)}
+    try:
+        _requests()
+        transport = True
+    except LLMError:
+        transport = False
     return {
-        "enabled": cfg.enabled,
+        "enabled": cfg.enabled and transport,
         "provider": cfg.provider,
         "model": cfg.model if cfg.enabled else None,
         "key_present": bool(cfg.api_key),
+        # Reported separately so a health check distinguishes "no provider
+        # configured" from "configured but the extra is not installed".
+        "transport_available": transport,
     }
+
+
+def _requests():
+    """Imported here, not at module scope.
+
+    `requests` is an optional extra: the decision engine, the CLI and the
+    red-team suite must all work on a bare `pip install swarms-guard`. A
+    top-level import makes an HTTP client a hard dependency of a package
+    whose entire point is that nothing on the enforcement path talks to
+    anything.
+    """
+    try:
+        import requests
+    except ImportError as exc:  # pragma: no cover - depends on the install
+        raise LLMError(
+            "live model calls need the 'llm' extra: pip install 'swarms-guard[llm]'"
+        ) from exc
+    return requests
 
 
 def _post(url: str, payload: dict, headers: dict, timeout: float) -> dict:
     """One POST with a single retry on the failures that are actually worth
     retrying. Retrying a 400 just sends the same bad request twice."""
+    requests = _requests()
     last: Exception | None = None
     for attempt in (0, 1):
         try:

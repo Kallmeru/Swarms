@@ -204,3 +204,29 @@ def test_is_untrusted_treats_bare_literals_as_trusted():
     assert not is_untrusted("plain string")
     assert not is_untrusted({"a": [1, 2, "b"]})
     assert is_untrusted({"a": [1, UNTRUSTED]})
+
+
+# --- packaging ---------------------------------------------------------------
+
+def test_the_engine_imports_without_the_optional_http_client(monkeypatch):
+    """`requests` is an optional extra. A bare `pip install swarms-guard` has
+    to be able to load a policy, decide, and run the red-team suite; a
+    top-level import in llm.py made all three fail, and only the wheel job in
+    CI caught it."""
+    import builtins
+    import swarms.llm as llm
+
+    real_import = builtins.__import__
+
+    def no_requests(name, *args, **kwargs):
+        if name == "requests":
+            raise ImportError("No module named 'requests'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_requests)
+
+    # Still importable, still able to report its state, and clear about why.
+    assert llm.available() is False
+    assert llm.describe()["transport_available"] is False
+    with pytest.raises(llm.LLMError, match="swarms-guard\[llm\]"):
+        llm._requests()
