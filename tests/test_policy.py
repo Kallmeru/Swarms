@@ -228,5 +228,5 @@ def test_the_engine_imports_without_the_optional_http_client(monkeypatch):
     # Still importable, still able to report its state, and clear about why.
     assert llm.available() is False
     assert llm.describe()["transport_available"] is False
-    with pytest.raises(llm.LLMError, match="swarms-guard\[llm\]"):
+    with pytest.raises(llm.LLMError, match=r"swarms-guard\[llm\]"):
         llm._requests()
