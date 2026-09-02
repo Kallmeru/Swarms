@@ -49,6 +49,10 @@ async function detectBackend() {
     API.live = true;
   } catch {
     API.live = false;
+    // The failed probe above shows up in devtools as a 404. Say why, so
+    // anyone who opens the console on the static build sees a deliberate
+    // feature check rather than a broken request.
+    console.info('SWARMS: no backend at /api/health, running in REPLAY mode. The 404 above is that check. Run `python -m server` for live mode.');
   }
   renderMode();
   return API.live;
