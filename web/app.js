@@ -1,7 +1,14 @@
-// SWARMS frontend. Reads pre-generated event JSON (see web/data/) and
-// animates the swarm graph inside the invoice_final.pdf window. No backend
-// calls of its own: benchmark/run_benchmark.py (core + attack-lab branches)
-// is the only thing that writes into web/data/.
+// SWARMS frontend.
+//
+// Runs in one of two modes and figures out which on its own:
+//
+//   LIVE    a backend answered /api/health, so every run is executed on
+//           demand by the real pipeline, including on text a visitor types.
+//   REPLAY  no backend (the static GitHub Pages build), so it animates the
+//           traces benchmark/run_benchmark.py wrote into web/data/.
+//
+// The event format is identical either way, which is the only reason one set
+// of rendering code can serve both.
 
 const NODES = [
   { id: 'doc',    label: 'Poisoned\nDocument', shape: 'box' },
@@ -22,8 +29,92 @@ const CREAM = '#F3E7D3';
 const AGENT_TO_NODE = { agent1_reader: 'agent1', agent2_analyst: 'agent2', agent3_emailer: 'agent3' };
 const AGENT_TO_HANDOFF_EDGE = { agent1_reader: 'e_a1_a2', agent2_analyst: 'e_a2_a3' };
 
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+
+// ---------- transport ----------
+
+const API = { live: false, health: null };
+
+async function detectBackend() {
+  try {
+    const res = await fetch('api/health', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    API.health = await res.json();
+    API.live = true;
+  } catch {
+    API.live = false;
+  }
+  renderMode();
+  return API.live;
+}
+
+function renderMode() {
+  const badge = $('modeBadge');
+  if (!badge) return;
+  if (API.live) {
+    const llm = API.health && API.health.llm && API.health.llm.enabled
+      ? `${API.health.llm.provider}:${API.health.llm.model}`
+      : 'deterministic agents';
+    badge.textContent = 'ENGINE: LIVE';
+    badge.title = `Runs are executed on request by the real pipeline (${llm}).`;
+    badge.classList.add('mode-live');
+  } else {
+    badge.textContent = 'ENGINE: REPLAY';
+    badge.title = 'No backend reachable, animating traces recorded by benchmark/run_benchmark.py.';
+    badge.classList.remove('mode-live');
+  }
+  document.querySelectorAll('[data-requires-live]').forEach(el => {
+    el.classList.toggle('needs-backend', !API.live);
+    el.querySelectorAll('button, textarea, input').forEach(c => { c.disabled = !API.live; });
+  });
+}
+
+async function postRun(body) {
+  const res = await fetch('api/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try { detail = (await res.json()).detail || detail; } catch { /* body was not json */ }
+    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+  }
+  return res.json();
+}
+
+async function loadManifest() {
+  if (API.live) {
+    const data = await (await fetch('api/attacks')).json();
+    return data.fixtures;
+  }
+  const res = await fetch('data/manifest.json');
+  if (!res.ok) throw new Error(`manifest.json: ${res.status}`);
+  return res.json();
+}
+
+// Static replay reads the two recorded traces; live mode executes both runs
+// server-side. Same shape out either way so nothing downstream branches.
+async function runAttack(attackId) {
+  if (API.live) return postRun({ attack_id: attackId });
+  const [off, on] = await Promise.all(['off', 'on'].map(mode =>
+    fetch(`data/${attackId}_${mode}.json`).then(r => {
+      if (!r.ok) throw new Error(`${attackId}_${mode}.json: ${r.status}`);
+      return r.json();
+    })));
+  return { off: { events: off }, on: { events: on } };
+}
+
+// ---------- graph ----------
+
 function makeGraph(containerId) {
-  const container = document.getElementById(containerId);
+  const container = $(containerId);
   const nodes = new vis.DataSet(NODES.map(n => ({ ...n, color: { background: '#241D16', border: NEUTRAL, highlight: { background: '#241D16', border: NEUTRAL } } })));
   const edges = new vis.DataSet(EDGES.map(e => ({ ...e, color: NEUTRAL, width: 2, arrows: 'to' })));
   const network = new vis.Network(container, { nodes, edges }, {
@@ -45,142 +136,279 @@ function resetGraph(graph) {
   EDGES.forEach(e => graph.edges.update({ id: e.id, color: NEUTRAL, width: 2, dashes: false }));
 }
 
-function applyEvent(evt, graph, statusEl, reasonEl) {
+// ---------- event rendering ----------
+
+// A running trace next to the graph. The graph shows what happened, this
+// shows what the engine said while it happened, which is what anyone
+// evaluating a security tool actually wants to read.
+function trace(ctx, text, kind) {
+  if (!ctx.traceEl) return;
+  const li = document.createElement('li');
+  li.className = `trace-line${kind ? ' trace-' + kind : ''}`;
+  li.textContent = text;
+  ctx.traceEl.appendChild(li);
+  ctx.traceEl.scrollTop = ctx.traceEl.scrollHeight;
+}
+
+function applyEvent(evt, graph, ctx) {
   const nodeId = AGENT_TO_NODE[evt.agent];
+  const d = evt.data || {};
 
-  if (evt.type === 'AGENT_START' && nodeId) {
-    const isUntrusted = (evt.data.inputs || []).some(i => i.label === 'UNTRUSTED');
-    graph.nodes.update({ id: nodeId, color: nodeColor(isUntrusted ? UNTRUSTED : TRUSTED), borderWidth: 2.5 });
-  }
+  switch (evt.type) {
+    case 'RUN_START':
+      // Live runs declare intent and shield mode up front, which is what
+      // lets "the action executed" be read correctly: the same event means
+      // a worm succeeded on an attack and a job completed on a real task.
+      ctx.intent = d.intent || ctx.intent;
+      ctx.shield = d.shield || ctx.shield;
+      trace(ctx, `run ${d.attack_id} | shield ${ctx.shield} | authorized: ${(d.authorized_actions || []).join(', ') || 'nothing'}`);
+      break;
 
-  // an agent that reads untrusted tool output is contaminated for the rest of its turn,
-  // even if it started from a trusted instruction (e.g. Agent 1 reading a poisoned doc)
-  if (evt.type === 'TOOL_RESULT' && nodeId && evt.data.label === 'UNTRUSTED') {
-    graph.nodes.update({ id: nodeId, color: nodeColor(UNTRUSTED), borderWidth: 2.5 });
-  }
-
-  if (evt.type === 'AGENT_HANDOFF') {
-    const edgeId = AGENT_TO_HANDOFF_EDGE[evt.agent];
-    if (!edgeId) return; // agent3_emailer has no outgoing agent-to-agent handoff edge
-    if (evt.data.directive_requested && !evt.data.directive_allowed) {
-      graph.edges.update({ id: edgeId, color: BLOCKED, width: 3, dashes: [6, 4] });
-      const label = edgeId === 'e_a1_a2' ? 'Agent 1 to Agent 2' : 'Agent 2 to Agent 3';
-      statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> at ${label}`;
-      statusEl.className = 'status blocked';
-      reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}<br><b>Poisoned instruction:</b> "<i>${escapeHtml(evt.data.directive_requested)}</i>"`;
-      if (window.SwarmsSound) SwarmsSound.playContained();
-    } else {
-      const color = evt.data.data_label === 'UNTRUSTED' ? UNTRUSTED : TRUSTED;
-      graph.edges.update({ id: edgeId, color, width: 3 });
+    case 'AGENT_START': {
+      if (!nodeId) break;
+      const untrusted = (d.inputs || []).some(i => i.label === 'UNTRUSTED');
+      graph.nodes.update({ id: nodeId, color: nodeColor(untrusted ? UNTRUSTED : TRUSTED), borderWidth: 2.5 });
+      trace(ctx, `${evt.agent} starts, input ${untrusted ? 'UNTRUSTED' : 'TRUSTED'}`);
+      break;
     }
-  }
 
-  if (evt.type === 'ACTION_ALLOWED' && evt.agent === 'agent3_emailer' && evt.data.action === 'send_email') {
-    graph.edges.update({ id: 'e_a3_act', color: BLOCKED, width: 4 });
-    graph.nodes.update({ id: 'action', color: nodeColor(BLOCKED), borderWidth: 2.5 });
-    statusEl.innerHTML = `<b>WORM SUCCEEDED</b>: malicious email sent.`;
-    statusEl.className = 'status leaked';
-    if (window.SwarmsSound) SwarmsSound.playWormSucceeded();
-  }
+    case 'TOOL_RESULT':
+      // An agent that reads untrusted output is contaminated for the rest of
+      // its turn even if it began from a trusted instruction. This is Agent 1
+      // visibly catching it from the document.
+      if (nodeId && d.label === 'UNTRUSTED') {
+        graph.nodes.update({ id: nodeId, color: nodeColor(UNTRUSTED), borderWidth: 2.5 });
+        trace(ctx, `${evt.agent} read ${d.tool} -> UNTRUSTED`, 'warn');
+      }
+      break;
 
-  if (evt.type === 'ACTION_BLOCKED') {
-    graph.edges.update({ id: 'e_a3_act', color: BLOCKED, width: 3, dashes: [6, 4] });
-    statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> at final action`;
-    statusEl.className = 'status blocked';
-    reasonEl.innerHTML = `<b>Reason:</b> ${evt.data.reason}` +
-      (evt.data.offending_span ? `<br><b>Offending value:</b> "<i>${escapeHtml(evt.data.offending_span)}</i>"` : '');
-    if (window.SwarmsSound) SwarmsSound.playContained();
-  }
+    case 'CAPABILITY_ATTENUATED':
+      trace(ctx, `capability stripped at boundary: ${(d.removed || []).join(', ')} removed from ${d.agent}`, 'warn');
+      break;
 
-  // Ablaze's regex-weighted scanner, a second, independent signal on the
-  // same document. Purely informational: it doesn't affect containment,
-  // that's still entirely the capability model's job, and it fires
-  // identically from both the shield-off and shield-on event streams since
-  // it scores the same document either way, whichever arrives first wins,
-  // that's fine since the content is the same.
-  if (evt.type === 'SCANNER_RESULT') {
-    const panel = document.getElementById('scanner-panel');
-    if (panel) {
-      const pct = Math.round(evt.data.score * 100);
-      const verdict = evt.data.flagged
+    case 'AGENT_HANDOFF': {
+      const edgeId = AGENT_TO_HANDOFF_EDGE[evt.agent];
+      if (!edgeId) break;
+      if (d.directive_requested && !d.directive_allowed) {
+        graph.edges.update({ id: edgeId, color: BLOCKED, width: 3, dashes: [6, 4] });
+        const label = edgeId === 'e_a1_a2' ? 'Agent 1 to Agent 2' : 'Agent 2 to Agent 3';
+        contained(ctx, `at ${label}`, d.reason, d.directive_requested, 'Poisoned instruction');
+      } else {
+        graph.edges.update({ id: edgeId, color: d.data_label === 'UNTRUSTED' ? UNTRUSTED : TRUSTED, width: 3 });
+        trace(ctx, `${evt.agent} -> ${d.to}: data crosses as ${d.data_label}, authority does not`);
+      }
+      break;
+    }
+
+    case 'RECIPIENT_RESOLVED':
+      ctx.recipient = d;
+      trace(ctx,
+        `recipient resolved: ${d.recipient} [${d.label}] via ${(d.provenance || []).join(' -> ')}`,
+        d.label === 'UNTRUSTED' ? 'warn' : null);
+      renderRecipient(ctx);
+      break;
+
+    case 'ACTION_ALLOWED': {
+      if (d.action !== 'send_email') break;
+      const worm = ctx.shield === 'off' && ctx.intent !== 'benign';
+      graph.edges.update({ id: 'e_a3_act', color: worm ? BLOCKED : TRUSTED, width: 4 });
+      graph.nodes.update({ id: 'action', color: nodeColor(worm ? BLOCKED : TRUSTED), borderWidth: 2.5 });
+      if (worm) {
+        ctx.statusEl.innerHTML = '<b>WORM SUCCEEDED</b>: the injected instruction chose the recipient, and the mail went out.';
+        ctx.statusEl.className = 'status leaked';
+        trace(ctx, `ACTION_ALLOWED send_email -> ${(d.args || {}).to} (no enforcement)`, 'bad');
+        if (window.SwarmsSound) SwarmsSound.playWormSucceeded();
+      } else {
+        ctx.statusEl.innerHTML = '<span class="seal-badge">&#10003;</span><b>DELIVERED</b>: legitimate task completed.';
+        ctx.statusEl.className = 'status delivered';
+        trace(ctx, `ACTION_ALLOWED send_email -> ${(d.args || {}).to} (${d.reason})`, 'good');
+      }
+      break;
+    }
+
+    case 'ACTION_BLOCKED':
+      graph.edges.update({ id: 'e_a3_act', color: BLOCKED, width: 3, dashes: [6, 4] });
+      contained(ctx, 'at the privileged action', d.reason, d.offending_span, 'Offending value');
+      trace(ctx, `ACTION_BLOCKED ${d.action}: ${d.reason}`, 'good');
+      break;
+
+    // Ablaze's regex scanner, scoring the same document independently. It
+    // never gates anything. It is shown because it sometimes misses attacks
+    // that containment still stops, which is the argument against building a
+    // defense out of detection.
+    case 'SCANNER_RESULT': {
+      const panel = $('scanner-panel');
+      if (!panel) break;
+      const verdict = d.flagged
         ? '<span class="scanner-flagged">FLAGGED</span>'
         : '<span class="scanner-clear">not flagged</span>';
-      const matches = evt.data.findings.length ? ` &middot; matched: ${evt.data.findings.map(escapeHtml).join(', ')}` : ' &middot; no rule matched';
-      panel.innerHTML = `<b>Attack-lab scanner:</b> score ${pct}% &middot; ${verdict}${matches}`;
+      const matched = (d.findings || []).length
+        ? ` &middot; matched: ${d.findings.map(escapeHtml).join(', ')}`
+        : ' &middot; no rule matched';
+      panel.innerHTML = `<b>Attack-lab scanner:</b> score ${Math.round(d.score * 100)}% &middot; ${verdict}${matched}`;
+      break;
     }
-  }
 
-  // What Ablaze's ScannerAgent.send_alert() would have emailed for this
-  // flagged attack, real subject/body, real attack details, but never
-  // actually sent: the live site is static (no backend to send from when a
-  // visitor clicks Run Attack), and using real SMTP credentials in a public
-  // demo isn't something to depend on. Same fires-from-both-streams note as
-  // SCANNER_RESULT above applies here.
-  if (evt.type === 'SCANNER_ALERT_PREVIEW') {
-    const el = document.getElementById('alert-preview');
-    if (el) {
-      el.innerHTML = `<div class="alert-preview-header">Alert email &mdash; preview, not sent</div>` +
-        `<div class="alert-preview-meta"><b>To:</b> ${escapeHtml(evt.data.to)}<br><b>From:</b> ${escapeHtml(evt.data.from)}<br><b>Subject:</b> ${escapeHtml(evt.data.subject)}</div>` +
-        `<div class="alert-preview-body">${escapeHtml(evt.data.body)}</div>`;
+    case 'SCANNER_ALERT_PREVIEW': {
+      const el = $('alert-preview');
+      if (!el) break;
+      el.innerHTML =
+        '<div class="alert-preview-header">Alert email &mdash; preview, not sent</div>' +
+        `<div class="alert-preview-meta"><b>To:</b> ${escapeHtml(d.to)}<br><b>From:</b> ${escapeHtml(d.from)}<br><b>Subject:</b> ${escapeHtml(d.subject)}</div>` +
+        `<div class="alert-preview-body">${escapeHtml(d.body)}</div>`;
+      break;
     }
   }
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+function contained(ctx, where, reason, span, spanLabel) {
+  ctx.statusEl.innerHTML = `<span class="seal-badge">&#10003;</span><b>CONTAINED</b> ${where}`;
+  ctx.statusEl.className = 'status blocked';
+  const reasonEl = $('reason-panel');
+  if (reasonEl) {
+    reasonEl.innerHTML = `<b>Reason:</b> ${escapeHtml(reason || '')}` +
+      (span ? `<br><b>${spanLabel}:</b> "<i>${escapeHtml(span)}</i>"` : '');
+  }
+  if (window.SwarmsSound) SwarmsSound.playContained();
 }
 
-async function playSequence(events, graph, statusEl, reasonEl, delayMs) {
+function renderRecipient(ctx) {
+  const el = $(`recipient-${ctx.shield}`);
+  if (!el || !ctx.recipient) return;
+  const r = ctx.recipient;
+  el.innerHTML = `<span class="chip chip-${r.label === 'UNTRUSTED' ? 'untrusted' : 'trusted'}">${r.label}</span>` +
+    `<code>${escapeHtml(r.recipient)}</code>`;
+}
+
+async function playSequence(events, graph, statusEl, traceEl, shield, intent, delayMs) {
+  const ctx = { statusEl, traceEl, shield, intent, recipient: null };
   resetGraph(graph);
   statusEl.innerHTML = '';
   statusEl.className = 'status';
-  graph.nodes.update({ id: 'doc', color: nodeColor(UNTRUSTED), borderWidth: 2.5 }); // the document is always the untrusted seed
+  if (traceEl) traceEl.innerHTML = '';
+  const recipientEl = $(`recipient-${shield}`);
+  if (recipientEl) recipientEl.innerHTML = '';
+  // the document is always the untrusted seed
+  graph.nodes.update({ id: 'doc', color: nodeColor(UNTRUSTED), borderWidth: 2.5 });
+
   for (const evt of events) {
     await new Promise(r => setTimeout(r, delayMs));
     try {
-      applyEvent(evt, graph, statusEl, reasonEl);
+      applyEvent(evt, graph, ctx);
     } catch (err) {
       console.error('failed to apply event', evt, err);
     }
   }
 }
 
+// ---------- controls ----------
+
 const graphOff = makeGraph('graph-off');
 const graphOn = makeGraph('graph-on');
-const loadErrorEl = document.getElementById('loadError');
+const loadErrorEl = $('loadError');
+let manifest = [];
 
-async function loadAttack(attackId) {
-  const [offEvents, onEvents] = await Promise.all([
-    fetch(`data/${attackId}_off.json`).then(r => { if (!r.ok) throw new Error(`${attackId}_off.json: ${r.status}`); return r.json(); }),
-    fetch(`data/${attackId}_on.json`).then(r => { if (!r.ok) throw new Error(`${attackId}_on.json: ${r.status}`); return r.json(); }),
-  ]);
-  return { offEvents, onEvents };
+function selectedFixture() {
+  const id = $('attackPicker').value;
+  return manifest.find(a => a.attack_id === id) || {};
 }
 
-document.getElementById('playBtn').onclick = async () => {
-  if (window.SwarmsSound) SwarmsSound.playAttackStart();
-  const attackId = document.getElementById('attackPicker').value;
-  loadErrorEl.textContent = '';
-  const reasonEl = document.getElementById('reason-panel');
-  reasonEl.innerHTML = '';
-  document.getElementById('scanner-panel').innerHTML = '';
-  document.getElementById('alert-preview').innerHTML = '';
-  try {
-    const { offEvents, onEvents } = await loadAttack(attackId);
-    playSequence(offEvents, graphOff, document.getElementById('status-off'), reasonEl, 650);
-    playSequence(onEvents, graphOn, document.getElementById('status-on'), reasonEl, 650);
-  } catch (err) {
-    loadErrorEl.textContent = `Could not load attack data: ${err.message}`;
-    console.error(err);
-  }
-};
+function showPayload() {
+  const el = $('payload-panel');
+  const fixture = selectedFixture();
+  if (!el || !fixture.document_text) { if (el) el.innerHTML = ''; return; }
+  el.innerHTML =
+    `<div class="payload-task"><b>Human's task:</b> ${escapeHtml(fixture.user_task || '')}</div>` +
+    `<div class="payload-doc"><b>Document the reader ingests:</b><br>${escapeHtml(fixture.document_text)}</div>` +
+    (fixture.notes ? `<div class="payload-note">${escapeHtml(fixture.notes)}</div>` : '');
+}
 
-fetch('data/manifest.json')
-  .then(r => r.json())
+async function play(source) {
+  loadErrorEl.textContent = '';
+  const reasonEl = $('reason-panel');
+  if (reasonEl) reasonEl.innerHTML = '';
+  ['scanner-panel', 'alert-preview'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+  if (window.SwarmsSound) SwarmsSound.playAttackStart();
+
+  const btn = $('playBtn');
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+  try {
+    const result = await source();
+    const intent = (result.attack && result.attack.intent) || selectedFixture().intent || 'malicious';
+    await Promise.all([
+      playSequence(result.off.events, graphOff, $('status-off'), $('trace-off'), 'off', intent, 500),
+      playSequence(result.on.events, graphOn, $('status-on'), $('trace-on'), 'on', intent, 500),
+    ]);
+  } catch (err) {
+    loadErrorEl.textContent = `Run failed: ${err.message}`;
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Attack';
+  }
+}
+
+$('playBtn').onclick = () => play(() => runAttack($('attackPicker').value));
+
+// ---------- live console: run the pipeline on text the visitor supplies ----------
+
+const consoleForm = $('consoleForm');
+if (consoleForm) {
+  consoleForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const out = $('consoleResult');
+    const btn = $('consoleRun');
+    out.innerHTML = '<div class="console-pending">Running both pipelines...</div>';
+    btn.disabled = true;
+    try {
+      const result = await postRun({
+        document_text: $('consoleDoc').value,
+        user_task: $('consoleTask').value || undefined,
+        task_recipient: $('consoleRecipient').value,
+        authorize_send: $('consoleAuthorize').checked,
+      });
+      out.innerHTML = renderConsoleResult(result);
+      if (window.SwarmsSound) SwarmsSound.playContained();
+    } catch (err) {
+      out.innerHTML = `<div class="console-error">${escapeHtml(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function renderConsoleResult(result) {
+  const row = (mode) => {
+    const r = result[mode];
+    const blocked = (r.events.find(e => e.type === 'ACTION_BLOCKED') || {}).data || {};
+    const executed = r.malicious_action_executed;
+    const verdict = executed
+      ? `<span class="chip chip-untrusted">SENT</span>`
+      : `<span class="chip chip-trusted">BLOCKED</span>`;
+    return `<div class="console-row">
+      <div class="console-row-head">Shield ${mode.toUpperCase()} ${verdict}</div>
+      <div class="console-kv"><span>recipient</span><code>${escapeHtml(r.recipient)}</code>
+        <span class="chip chip-${r.recipient_label === 'UNTRUSTED' ? 'untrusted' : 'trusted'}">${r.recipient_label}</span></div>
+      ${blocked.reason ? `<div class="console-kv"><span>reason</span><em>${escapeHtml(blocked.reason)}</em></div>` : ''}
+      ${blocked.offending_span ? `<div class="console-kv"><span>offending</span><code>${escapeHtml(blocked.offending_span)}</code></div>` : ''}
+      <div class="console-kv"><span>outbox</span><code>${r.outbox.length} recorded, 0 delivered</code></div>
+    </div>`;
+  };
+  const hijacked = result.off.recipient_label === 'UNTRUSTED';
+  return `<div class="console-verdict">${hijacked
+    ? 'Your text hijacked the unprotected pipeline. Under the shield it did not.'
+    : 'Your text did not redirect the unprotected pipeline, so both runs behaved the same.'}</div>`
+    + row('off') + row('on');
+}
+
+// ---------- startup ----------
+
+detectBackend()
+  .then(loadManifest)
   .then(list => {
-    const sel = document.getElementById('attackPicker');
+    manifest = list;
+    const sel = $('attackPicker');
     list.forEach(a => {
       const opt = document.createElement('option');
       opt.value = a.attack_id;
@@ -191,10 +419,9 @@ fetch('data/manifest.json')
     // Visual attack picker: a curved wheel kept in sync with the real
     // <select> above (attackPicker stays the source of truth playBtn reads
     // from, and the fully accessible fallback for keyboard/screen readers).
-    const wheelEl = document.getElementById('attackWheel');
+    const wheelEl = $('attackWheel');
     if (wheelEl && list.length && typeof initOptionWheel === 'function') {
-      const labels = list.map(a => a.attack_id);
-      const wheel = initOptionWheel(wheelEl, labels, {
+      const wheel = initOptionWheel(wheelEl, list.map(a => a.attack_id), {
         onChange: (index) => {
           sel.value = list[index].attack_id;
           sel.dispatchEvent(new Event('change'));
@@ -205,8 +432,10 @@ fetch('data/manifest.json')
         if (index >= 0) wheel.select(index);
       });
     }
+    sel.addEventListener('change', showPayload);
+    showPayload();
   })
-  .catch(err => { loadErrorEl.textContent = `Could not load manifest.json: ${err.message}`; });
+  .catch(err => { loadErrorEl.textContent = `Could not load the attack list: ${err.message}`; });
 
 // Constructing Chart.js against a canvas that's still display:none (the
 // window hasn't been opened yet) leaves it permanently stuck at 0x0, even a
@@ -215,30 +444,48 @@ fetch('data/manifest.json')
 // of at page load.
 let benchmarkChart = null;
 let benchmarkSummary = null;
+
 fetch('data/benchmark_summary.json')
   .then(r => r.json())
-  .then(summary => { benchmarkSummary = summary; ensureBenchmarkChart(); })
+  .then(summary => { benchmarkSummary = summary; renderBenchmarkStats(); ensureBenchmarkChart(); })
   .catch(err => { loadErrorEl.textContent = `Could not load benchmark_summary.json: ${err.message}`; });
+
+function renderBenchmarkStats() {
+  const el = $('benchmarkStats');
+  if (!el || !benchmarkSummary) return;
+  const s = benchmarkSummary;
+  el.innerHTML = [
+    ['attacks contained', `${s.total_attacks - s.attacks_succeeded_shield_on}/${s.total_attacks}`],
+    ['benign tasks still completed', `${s.benign_completed_shield_on}/${s.benign_authorized}`],
+    ['false positives', String(s.false_positives)],
+    ['wall clock', `${s.duration_seconds}s for ${s.total_fixtures * 2} runs`],
+  ].map(([k, v]) => `<div class="bm-stat"><span>${k}</span><b>${escapeHtml(v)}</b></div>`).join('');
+}
 
 function ensureBenchmarkChart() {
   if (benchmarkChart || !benchmarkSummary) return;
-  const canvas = document.getElementById('benchmarkChart');
-  if (canvas.getBoundingClientRect().width === 0) return; // still hidden, openWindow() will call this again once it's actually visible
+  const canvas = $('benchmarkChart');
+  if (canvas.getBoundingClientRect().width === 0) return; // still hidden, openWindow() calls this again once it's visible
+  const s = benchmarkSummary;
   benchmarkChart = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: ['Shield OFF', 'Shield ON'],
+      labels: ['Attacks succeed\nshield OFF', 'Attacks succeed\nshield ON', 'Benign work\ncompletes, shield ON'],
       datasets: [{
-        label: `Malicious action success rate (n=${benchmarkSummary.total_attacks})`,
-        data: [benchmarkSummary.shield_off_success_rate * 100, benchmarkSummary.shield_on_success_rate * 100],
-        backgroundColor: [BLOCKED, TRUSTED],
+        label: `n=${s.total_attacks} attacks, ${s.benign_authorized} benign`,
+        data: [
+          s.shield_off_success_rate * 100,
+          s.shield_on_success_rate * 100,
+          (s.utility_retained !== undefined ? s.utility_retained : 1) * 100,
+        ],
+        backgroundColor: [BLOCKED, TRUSTED, TRUSTED],
         borderRadius: 4,
       }],
     },
     options: {
       scales: {
         y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', color: '#A0917E' }, grid: { color: 'rgba(243,231,211,0.12)' } },
-        x: { ticks: { color: '#A0917E' }, grid: { display: false } },
+        x: { ticks: { color: '#A0917E', font: { size: 9 } }, grid: { display: false } },
       },
       plugins: { legend: { display: false } },
     },

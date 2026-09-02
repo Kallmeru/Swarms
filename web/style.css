@@ -504,7 +504,11 @@ button { font: inherit; }
   }
   .split { flex-direction: column; }
   .pane:first-child { border-right: none; border-bottom: 1px solid var(--line); }
-  .menubar-item:first-child { display: none; } /* keep only the clock on very small headers */
+  /* Only room for one item here. Keep the engine badge, drop the clock: the
+     badge says whether runs are live or replayed, which changes what the
+     page can do. This used to hide the badge's slot back when it held a
+     static "STATUS: MONITORING" label that meant nothing. */
+  #clock { display: none; }
   .taskbar-links button { padding: 0.6rem 0.8rem; }
 }
 
@@ -544,13 +548,45 @@ button { font: inherit; }
 .dash-stats { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3.5rem; }
 .dash-stat {
   background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
-  padding: 1.1rem 1.4rem; min-width: 150px; text-align: center;
+  padding: 1.1rem 1.4rem; text-align: center;
+  /* fixed basis so a longer label wraps inside its own tile instead of
+     widening it and pushing the fourth stat onto its own row */
+  flex: 0 1 165px; min-width: 150px; max-width: 200px;
 }
 .dash-stat-value { display: block; font-size: 1.8rem; font-weight: 700; color: var(--cream); }
 .dash-stat-bad .dash-stat-value { color: var(--crimson); }
 .dash-stat-good .dash-stat-value { color: var(--sage); }
 .dash-stat-label { display: block; font-size: 0.68rem; color: var(--ink-soft); letter-spacing: 0.03em; margin-top: 0.3rem; }
 
+.dash-stats-note {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  max-width: 70ch;
+  margin: -2.5rem auto 3.5rem;
+  line-height: 1.7;
+}
+.dash-stats-note:empty { display: none; }
+.dash-concept-note {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  max-width: 66ch;
+  margin: 1.5rem auto 0;
+  text-align: center;
+}
+.dash-code {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--sage);
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.72rem;
+  line-height: 1.8;
+  color: var(--cream);
+  max-width: 66ch;
+  margin: 0 auto;
+}
 .dash-concept, .dash-contributors { margin-bottom: 3.5rem; }
 .dash-concept h2, .dash-contributors h2 {
   font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft);
@@ -584,4 +620,204 @@ button { font: inherit; }
 @media (max-width: 700px) {
   .dash-steps, .dash-contributor-grid { grid-template-columns: 1fr; }
   .dash-stats { flex-direction: column; align-items: stretch; }
+}
+
+/* ==========================================================================
+   Live engine additions: mode badge, payload view, per-pane trace, the live
+   console, and the benchmark stat strip. Same palette and the same rule as
+   the rest of the file: sage means contained or trusted, ochre means
+   untrusted and in flight, crimson means it got through.
+   ========================================================================== */
+
+#modeBadge { letter-spacing: 0.06em; }
+#modeBadge.mode-live { color: var(--sage); }
+
+/* the fixture's payload, shown before it runs: a demo that hides the input
+   is asking to be taken on faith */
+.payload-panel {
+  margin: 0.7rem 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ochre);
+  background: rgba(211, 162, 78, 0.05);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+.payload-panel:empty { display: none; }
+.payload-task { color: var(--ink-soft); margin-bottom: 0.5rem; }
+.payload-doc { color: var(--cream); word-break: break-word; }
+.payload-note { margin-top: 0.5rem; color: var(--ink-soft); font-style: italic; }
+
+.recipient-line {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 1.5em;
+  flex-wrap: wrap;
+}
+.recipient-line code { word-break: break-all; }
+
+.chip {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+.chip-trusted   { color: var(--sage); }
+.chip-untrusted { color: var(--ochre); }
+
+/* what the engine said, as it said it */
+.trace {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.6rem;
+  max-height: 130px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.64rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.trace:empty { display: none; }
+.trace-line { word-break: break-word; }
+.trace-line::before { content: "> "; opacity: 0.5; }
+.trace-warn { color: var(--ochre); }
+.trace-good { color: var(--sage); }
+.trace-bad  { color: var(--crimson); }
+
+.status.delivered { color: var(--sage); }
+
+/* ---- live console ---- */
+
+.window-mid { width: 520px; }
+
+.console-intro, .console-offline {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin: 0 0 0.8rem;
+}
+.console-offline { display: none; color: var(--ochre); }
+[data-requires-live].needs-backend .console-offline { display: block; }
+[data-requires-live].needs-backend form { opacity: 0.45; }
+
+.console-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0.6rem 0 0.25rem;
+}
+#consoleForm textarea,
+#consoleForm input[type="text"],
+#consoleForm input[type="email"] {
+  width: 100%;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--cream);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.6rem;
+  resize: vertical;
+}
+#consoleForm textarea:focus,
+#consoleForm input:focus { outline: 1px solid var(--ochre); }
+
+.console-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.console-controls .console-label { margin: 0; }
+.console-controls input[type="email"] { flex: 1 1 180px; width: auto; }
+.console-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+}
+#consoleRun {
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.45rem 0.9rem;
+  color: var(--bg);
+  background: var(--cream);
+  border: none;
+  cursor: pointer;
+}
+#consoleRun:disabled { opacity: 0.5; cursor: default; }
+
+.console-result { margin-top: 1rem; }
+.console-result:empty { display: none; }
+.console-verdict {
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  color: var(--cream);
+}
+.console-row {
+  border: 1px solid var(--line);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.7rem;
+}
+.console-row-head {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.console-kv {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+.console-kv > span:first-child {
+  color: var(--ink-soft);
+  min-width: 74px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.console-kv code, .console-kv em { word-break: break-word; }
+.console-pending { color: var(--ink-soft); font-size: 0.72rem; }
+.console-error { color: var(--crimson); font-size: 0.72rem; }
+
+/* ---- benchmark stat strip ---- */
+
+.bm-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.bm-stat {
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.6rem;
+}
+.bm-stat span {
+  display: block;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.bm-stat b { font-size: 0.9rem; color: var(--sage); }
+
+@media (max-width: 780px) {
+  .window-mid { width: 100%; }
+  .bm-stats { grid-template-columns: 1fr; }
 }

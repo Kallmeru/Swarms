@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 is the floor the type syntax in core/ needs. Linux-only on
+        # purpose for now: the one platform-sensitive thing here is path
+        # handling, and everything uses os.path.join.
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Unit and integration tests
+        run: python -m pytest tests -q
+
+      - name: End-to-end check
+        run: python Demo.py
+
+      - name: Scanner self-check (no API key needed)
+        run: python -m attack_lab.test_scanner
+
+      # --strict exits non-zero if any attack got through or any benign task
+      # was refused, so a regression in the security property fails the build
+      # instead of quietly changing a number in the README.
+      - name: Containment benchmark
+        run: python -m benchmark.run_benchmark --strict
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.python-version }}
+          path: |
+            benchmark/results.csv
+            benchmark/results.json
+          if-no-files-found: ignore

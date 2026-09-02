@@ -50,7 +50,13 @@
         <span class="dash-stat-value" id="statOn">&mdash;</span>
         <span class="dash-stat-label">succeed, shield on</span>
       </div>
+      <div class="dash-stat dash-stat-good">
+        <span class="dash-stat-value" id="statUtility">&mdash;</span>
+        <span class="dash-stat-label">legitimate tasks still complete</span>
+      </div>
     </section>
+
+    <p class="dash-stats-note" id="statsNote"></p>
 
     <section class="dash-concept">
       <h2>How it works</h2>
@@ -68,9 +74,19 @@
         <div class="dash-step">
           <span class="dash-step-num">3</span>
           <h3>Contain</h3>
-          <p>When an agent finally attempts a privileged action, the dropped capability catches it there. The worm's instruction never crosses a boundary that would honor it.</p>
+          <p>When an agent attempts a privileged action, two things are checked: did the human authorize this action, and does every argument that steers it trace back to the human. An injected recipient fails the second. Nothing about the wording is examined.</p>
         </div>
       </div>
+      <p class="dash-concept-note">The body of that email may quote the untrusted document freely. Only the arguments that decide what the action <em>does</em> have to be grounded, which is why ordinary work still completes rather than being blocked along with the attack.</p>
+    </section>
+
+    <section class="dash-concept">
+      <h2>Run it yourself</h2>
+      <p class="dash-pitch">The hosted demo replays recorded runs. Run the backend and the same page executes the pipeline live, including on any document you type into the console.</p>
+      <pre class="dash-code"><code>git clone https://github.com/Kallmeru/Swarms.git &amp;&amp; cd Swarms
+pip install -r requirements.txt
+python -m benchmark.run_benchmark    # reproduce the numbers above
+python -m server                     # then open http://localhost:8000</code></pre>
     </section>
 
     <section class="dash-contributors">
