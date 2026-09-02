@@ -1,10 +1,27 @@
-.claude/
-.venv/
-venv/
+# Python
 __pycache__/
 *.pyc
-node_modules/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# Local config and secrets
 .env
-runs/
+.claude/
+
+# Runtime artifacts: the audit database is per-deployment state, not source
+*.db
+*.db-wal
+*.db-shm
+redteam-report.json
+
+# Editors / OS
+node_modules/
 .DS_Store
 Thumbs.db
+
+# Stale run artifacts from the pre-2.0 event-log format
+runs/

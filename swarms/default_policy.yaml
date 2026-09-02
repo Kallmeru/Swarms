@@ -1,0 +1,127 @@
+# SWARMS policy — the file an operator owns.
+#
+# Copy this next to your application as `swarms.yaml` and replace the actions
+# with your own tools. The engine finds it by walking up from the working
+# directory, or you can point at it with SWARMS_POLICY=/path/to/swarms.yaml.
+#
+# Two ideas and that is all:
+#
+#   capability   what a principal is allowed to do at all.
+#   control_args the arguments that decide what an action does to the world.
+#                These must trace back to the human's request. Everything
+#                else is a data argument and may carry untrusted content.
+#
+# Getting control_args right is the whole job. An email body quoting a
+# scraped web page is normal. An email *recipient* taken from that page is an
+# attack. List the arguments you would be unhappy to see chosen by a document
+# your agent happened to read.
+
+version: 1
+name: default
+
+actions:
+
+  send_email:
+    description: Send mail on the user's behalf.
+    capability: email.send
+    # Who it reaches is the user's decision, never the document's.
+    control_args: [to, cc, bcc]
+    # What it says may quote anything; the content is the point of the email.
+    data_args: [subject, body, attachments]
+
+  http_request:
+    description: Call an external HTTP endpoint.
+    capability: net.request
+    # The destination and the headers steer where data goes and who it
+    # authenticates as. The payload does not.
+    control_args: [url, method, headers]
+    data_args: [body, params]
+
+  write_file:
+    description: Write to the filesystem.
+    capability: fs.write
+    control_args: [path]
+    data_args: [content]
+
+  run_command:
+    description: Execute a shell command.
+    capability: exec.run
+    # Everything about a command is control. There is no benign half.
+    control_args: [command, argv, cwd, env]
+    data_args: [stdin]
+
+  db_query:
+    description: Query the application database.
+    capability: db.read
+    control_args: [sql, table, where]
+    data_args: [limit]
+
+  charge_card:
+    description: Take a payment.
+    capability: payments.charge
+    control_args: [customer_id, amount, currency]
+    data_args: [description, metadata]
+    # Grounding already stops an injected recipient or amount. Approval is
+    # the second control for actions where being right 99.9% of the time is
+    # still not good enough to do unattended.
+    require_approval: true
+
+principals:
+
+  # The reference three-agent pipeline the red-team suite exercises. An agent
+  # that only reads and summarizes holds nothing: there is no action it should
+  # be able to take, so there is no capability to take away later.
+  agent1_reader:
+    description: Ingests documents. Reads only.
+    capabilities: []
+
+  agent2_analyst:
+    description: Summarizes. Reads only.
+    capabilities: []
+
+  agent3_emailer:
+    description: Drafts and sends mail.
+    capabilities: [email.send]
+
+  # A starting point for your own service. Grant the narrowest set that lets
+  # it do its job, then widen deliberately.
+  app:
+    description: Your application's default agent.
+    capabilities: [net.request, fs.write, db.read]
+
+  # Held by whoever your payment flow runs as. Separate from `app` so a
+  # compromised general-purpose agent cannot reach it.
+  billing:
+    description: Payment operations. Approval-gated.
+    capabilities: [payments.charge]
+
+  # Deliberately unable to do anything. Useful as the principal for untrusted
+  # or experimental agents while you watch the audit log.
+  sandbox:
+    description: No authority at all.
+    capabilities: []
+
+  operator:
+    description: Break-glass. Grant to a human-driven path, never to an agent.
+    capabilities: [exec.run]
+
+defaults:
+  # An action the policy does not declare is denied. New tools arrive
+  # inert and become callable when someone writes them down.
+  unknown_action: deny
+
+  # A principal the policy does not declare holds nothing, so a typo in a
+  # principal name fails safe rather than inheriting someone's authority.
+  unknown_principal: deny
+
+  # The verdict for a value that matches neither ingested content nor
+  # anything the human trusted, on the decorator path where arguments come
+  # from your own code. Model-emitted tool calls are always fail-closed
+  # regardless of this setting. Set to `untrusted` for a high-assurance
+  # deployment where every control value must be explicitly grounded.
+  unlabeled_value: trusted
+
+  # Shortest value that may be matched against ingested content when
+  # recovering provenance. Below this, a substring hit against a page of
+  # prose is a coincidence rather than evidence.
+  min_match_length: 4
