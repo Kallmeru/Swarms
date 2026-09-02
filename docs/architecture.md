@@ -6,7 +6,7 @@ changing anything in `swarms/policy.py` or `swarms/capability.py`.
 ```
    your application
         │
-        ├── @guard.tool(...)  ─────┐          Python: in-process, ~30µs
+        ├── @guard.tool(...)  ─────┐          Python: in-process, ~100µs
         │                          │
    other stacks                    ▼
         └── POST /v1/authorize ─► Guard ─► Session ─► policy.authorize()
@@ -28,8 +28,9 @@ an action, arguments, a principal and a policy, and returns a `Decision`. It
 does no I/O, calls no model, and reads no file. Three consequences worth
 keeping:
 
-- **It is fast enough to be unconditional.** ~30µs means there is never a
-  reason to sample or to skip the check under load.
+- **It is fast enough to be unconditional.** ~3µs for the decision, ~100µs
+  for the whole guarded call once the audit row is committed. There is never
+  a reason to sample or to skip the check under load.
 - **It is testable without mocks.** Every rule in `tests/test_policy.py` is a
   direct call.
 - **It cannot be talked out of an answer.** Content reaches the *data* path

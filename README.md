@@ -44,7 +44,10 @@ bundled here catches **8%**. Refusing arguments that cannot be traced to the
 human catches **100%**, without recognising anything.
 
 The engine is a dictionary lookup and a label comparison. No model call, no
-classifier, no pattern list. **~30µs** per decision.
+classifier, no pattern list. A decision costs **~3µs**; the full guarded call
+including the durable audit write is **~100µs**, about 10,000/sec on one
+thread. Fast enough that there is never a reason to sample or to skip it
+under load.
 
 ## The rules
 
@@ -239,6 +242,9 @@ enforce.
   red-team campaign.
 - **Server-side sessions are per-worker.** Run one worker, or add session
   affinity. `SessionRegistry` is the swap point.
+- **Audit throughput is bounded by SQLite's commit**, roughly 10k decisions
+  per second per process. Well above agent workloads, which are gated on
+  model latency, but it is the first thing to move if you outgrow it.
 
 ## Layout
 
