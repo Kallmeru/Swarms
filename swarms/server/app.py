@@ -21,15 +21,17 @@ import os
 import time
 from threading import Lock
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from swarms import __version__, llm
 from swarms.config import Policy, PolicyError
 from swarms.guard import Guard, Session
+from swarms.mcp import PROTOCOL_VERSION, MCPGateway
 from swarms.policy import Effect
 from swarms.server.auth import ApiKey, KeyRing, make_dependencies, startup_check
 from swarms.store import AuditStore
@@ -183,6 +185,15 @@ def create_app(guard: Guard | None = None, ring: KeyRing | None = None) -> FastA
                            allow_methods=["GET", "POST", "DELETE"], allow_headers=["*"])
 
     # -- health and metrics --------------------------------------------------
+
+    @app.get("/api/mcp", tags=["mcp"])
+    def mcp_status(key: ApiKey = Depends(require_key)) -> dict:
+        gw = getattr(app.state, "mcp_gateway", None)
+        if gw is None:
+            return {"enabled": False,
+                    "hint": "set SWARMS_MCP_UPSTREAM to the MCP server this gateway should relay to"}
+        return {"enabled": True, "protocol_version": PROTOCOL_VERSION, "upstream": gw.upstream,
+                "principal": gw.principal, "strict": gw.strict, "live_sessions": len(gw.sessions)}
 
     @app.get("/api/health", tags=["ops"])
     def health() -> dict:
@@ -358,6 +369,44 @@ def create_app(guard: Guard | None = None, ring: KeyRing | None = None) -> FastA
         write_report(report, os.path.join(ROOT, "redteam-report.json"),
                      web_dir=os.path.join(WEB_DIR, "data"))
         return report["summary"]
+
+    # -- MCP gateway ---------------------------------------------------------
+
+    # Enabled by pointing at an upstream MCP server. Without one there is
+    # nothing to relay to, so the route stays off rather than existing as an
+    # endpoint that always errors.
+    mcp_upstream = os.environ.get("SWARMS_MCP_UPSTREAM", "").strip()
+    if mcp_upstream:
+        gateway = MCPGateway(
+            guard,
+            upstream=mcp_upstream,
+            principal=os.environ.get("SWARMS_MCP_PRINCIPAL", "").strip(),
+            console_url=os.environ.get("SWARMS_CONSOLE_URL", "").strip(),
+            strict=os.environ.get("SWARMS_MCP_STRICT", "0") in ("1", "true", "True"),
+        )
+        app.state.mcp_gateway = gateway
+
+        @app.post("/mcp", tags=["mcp"])
+        async def mcp_endpoint(request: Request, key: ApiKey = Depends(require_writer)):
+            """MCP relay with grounding enforcement.
+
+            Point an MCP client's server URL here instead of at the upstream.
+            Declared async and reading the raw body because the MCP envelope
+            is the client's, not ours: validating it into a model here would
+            reject requests the upstream understands perfectly well.
+            """
+            try:
+                body = json.loads(await request.body() or b"{}")
+            except json.JSONDecodeError:
+                raise HTTPException(400, "request body is not valid JSON")
+            if not isinstance(body, dict):
+                raise HTTPException(400, "MCP request body must be a JSON object")
+
+            status, payload = await run_in_threadpool(
+                gateway.handle, body, dict(request.headers))
+            return JSONResponse(
+                payload, status_code=status,
+                headers={"MCP-Protocol-Version": PROTOCOL_VERSION})
 
     # -- console static files ------------------------------------------------
 

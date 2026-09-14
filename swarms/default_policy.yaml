@@ -19,6 +19,14 @@
 version: 1
 name: default
 
+# Named sets of values an operator vouches for. Referenced by `declassify`
+# below. Membership is configuration, so a value can only get in here by
+# someone putting it here.
+value_sets:
+  corporate_directory:
+    - boss@corp.example
+    - finance@corp.example
+
 actions:
 
   send_email:
@@ -28,6 +36,21 @@ actions:
     control_args: [to, cc, bcc]
     # What it says may quote anything; the content is the point of the email.
     data_args: [subject, body, attachments]
+    # Grounding alone would refuse "reply to the customer who emailed us",
+    # because that address genuinely comes from untrusted input. A rule that
+    # blocks real work gets switched off, so name the exceptions instead.
+    # The permission comes from this file, never from the content.
+    declassify:
+      to:
+        # Strongest: the value must be one you wrote down.
+        - allowlist: corporate_directory
+        # Weaker but practical, and commented out because it is your domain
+        # to choose, not ours: anything inside your own organisation. It does
+        # not identify the recipient, it bounds where mail can go, which still
+        # stops delivery to an attacker's mailbox. Uncomment and edit, and
+        # `swarms policy check` will remind you a pattern is only as strong
+        # as the expression you wrote.
+        # - pattern: '^[a-zA-Z0-9._%+-]+@corp\.example$'
 
   http_request:
     description: Call an external HTTP endpoint.

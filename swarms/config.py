@@ -23,6 +23,13 @@ import os
 from dataclasses import dataclass, field
 from typing import Iterable
 
+from swarms.declassify import (
+    Declassifier,
+    DeclassifierError,
+    normalize_value_sets,
+    parse_declassify,
+)
+
 DEFAULT_POLICY_FILENAMES = ("swarms.yaml", "swarms.yml", "swarms.json")
 
 
@@ -42,9 +49,15 @@ class ActionSpec:
     data_args: tuple[str, ...] = ()
     require_approval: bool = False
     description: str = ""
+    # arg name -> rules under which an untrusted value for it is still
+    # acceptable. Empty means the argument must always trace to the human.
+    declassify: dict[str, tuple[Declassifier, ...]] = field(default_factory=dict)
 
     def is_control(self, arg: str) -> bool:
         return arg in self.control_args
+
+    def declassifiers_for(self, arg: str) -> tuple[Declassifier, ...]:
+        return self.declassify.get(arg, ())
 
     def to_dict(self) -> dict:
         return {
@@ -54,6 +67,7 @@ class ActionSpec:
             "data_args": list(self.data_args),
             "require_approval": self.require_approval,
             "description": self.description,
+            "declassify": {a: [d.to_dict() for d in rules] for a, rules in self.declassify.items()},
         }
 
 
@@ -79,6 +93,9 @@ class Policy:
     name: str = "default"
     actions: dict[str, ActionSpec] = field(default_factory=dict)
     principals: dict[str, Principal] = field(default_factory=dict)
+    # Named sets of acceptable values, referenced by allowlist declassifiers.
+    # Case-folded at load time so comparisons do not each have to remember to.
+    value_sets: dict[str, frozenset[str]] = field(default_factory=dict)
     # Fail-closed defaults. Both are settable because there are legitimate
     # staging setups that want to observe before enforcing, but neither
     # default is the permissive one.
@@ -113,6 +130,7 @@ class Policy:
             "name": self.name,
             "actions": {k: v.to_dict() for k, v in self.actions.items()},
             "principals": {k: v.to_dict() for k, v in self.principals.items()},
+            "value_sets": {k: sorted(v) for k, v in self.value_sets.items()},
             "defaults": {
                 "unknown_action": self.unknown_action,
                 "unknown_principal": self.unknown_principal,
@@ -162,6 +180,11 @@ class Policy:
                     "action does to the world (recipient, path, url, amount). If this action really "
                     "has none, say so explicitly with 'control_args: []'."
                 )
+            try:
+                declassify = parse_declassify(spec.get("declassify"), action=name, control_args=control)
+            except DeclassifierError as exc:
+                raise PolicyError(str(exc)) from exc
+
             actions[name] = ActionSpec(
                 name=name,
                 capability=capability,
@@ -169,6 +192,7 @@ class Policy:
                 data_args=data,
                 require_approval=bool(spec.get("require_approval", False)),
                 description=spec.get("description", ""),
+                declassify=declassify,
             )
 
         principals: dict[str, Principal] = {}
@@ -177,8 +201,14 @@ class Policy:
             caps = frozenset(spec.get("capabilities") or ())
             principals[name] = Principal(name=name, capabilities=caps, description=spec.get("description", ""))
 
+        try:
+            value_sets = normalize_value_sets(raw.get("value_sets"))
+        except DeclassifierError as exc:
+            raise PolicyError(str(exc)) from exc
+
         defaults = raw.get("defaults") or {}
         policy = cls(
+            value_sets=value_sets,
             version=version,
             name=raw.get("name", "default"),
             actions=actions,
@@ -264,6 +294,15 @@ class Policy:
                     f"action {name!r} requires capability {action.capability!r}, which no principal holds, "
                     "so it can never be authorized"
                 )
+        for name, action in self.actions.items():
+            for arg, rules in action.declassify.items():
+                for rule in rules:
+                    if rule.kind == "allowlist" and rule.ref not in self.value_sets:
+                        problems.append(
+                            f"action {name!r} declassify.{arg} refers to value set {rule.ref!r}, "
+                            f"which is not defined under value_sets. It would refuse every value."
+                        )
+
         if not self.actions:
             problems.append("policy declares no actions, so every privileged call will be denied")
 
@@ -283,6 +322,15 @@ class Policy:
                 notes.append(f"{name}: no control arguments, so nothing about this action is grounded")
             if action.require_approval and not action.control_args:
                 notes.append(f"{name}: requires approval but grounds nothing, approval is carrying the whole check")
+        for name, action in self.actions.items():
+            for arg, rules in action.declassify.items():
+                for rule in rules:
+                    if rule.kind == "pattern":
+                        notes.append(
+                            f"{name}.{arg}: declassified by pattern {rule.ref!r}, which is only as "
+                            f"strong as the expression. An allowlist is stronger where one is possible."
+                        )
+
         for name, principal in self.principals.items():
             wildcards = [c for c in principal.capabilities if "*" in c]
             if wildcards:

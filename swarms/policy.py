@@ -45,6 +45,7 @@ class Rule(str, Enum):
     CAPABILITY = "capability"
     RUN_AUTHORITY = "run_authority"
     GROUNDING = "grounding"
+    DECLASSIFIED = "declassified"
     APPROVAL = "approval"
     OBSERVE_ONLY = "observe_only"
     PERMITTED = "permitted"
@@ -62,6 +63,10 @@ class Decision:
     offending_provenance: tuple[str, ...] = ()
     arg_labels: dict[str, str] = field(default_factory=dict)
     enforced: bool = True
+    # control arg -> the declassifier that let an untrusted value through.
+    # Present on allow decisions so "why was this permitted" is answerable
+    # without re-deriving it from the policy file.
+    declassified: dict[str, str] = field(default_factory=dict)
 
     @property
     def allowed(self) -> bool:
@@ -87,6 +92,7 @@ class Decision:
             "offending_span": self.offending_span,
             "offending_provenance": list(self.offending_provenance),
             "arg_labels": dict(self.arg_labels),
+            "declassified": dict(self.declassified),
         }
 
 
@@ -206,31 +212,86 @@ def authorize(
                       f"never asked for '{action}'")
 
     # 4. Grounding.
+    declassified: dict[str, str] = {}
     for arg in spec.control_args:
-        if arg in args and is_untrusted(args[arg]):
-            tainted = first_untrusted(args[arg])
-            span = str(tainted.value) if tainted else str(args[arg])
-            trail = tuple(tainted.provenance) if tainted and tainted.provenance else ("unknown origin",)
-            return decide(
-                Effect.DENY, Rule.GROUNDING,
-                f"control argument '{arg}' of '{action}' traces to untrusted content "
-                f"({' -> '.join(trail)}); content that was read cannot decide what a privileged "
-                f"action targets",
-                offending_arg=arg, offending_span=span, offending_provenance=trail,
-            )
+        if arg not in args or not is_untrusted(args[arg]):
+            continue
+
+        tainted = first_untrusted(args[arg])
+        span = str(tainted.value) if tainted else str(args[arg])
+        trail = tuple(tainted.provenance) if tainted and tainted.provenance else ("unknown origin",)
+
+        # The operator may have written down that this particular untrusted
+        # value is acceptable for this argument. The permission comes from
+        # the policy file, never from the content, so controlling the
+        # document does not let an attacker widen what is allowed.
+        rule = _declassifier_for(spec, arg, args[arg], policy)
+        if rule is not None:
+            declassified[arg] = rule
+            continue
+
+        return decide(
+            Effect.DENY, Rule.GROUNDING,
+            f"control argument '{arg}' of '{action}' traces to untrusted content "
+            f"({' -> '.join(trail)}); content that was read cannot decide what a privileged "
+            f"action targets",
+            offending_arg=arg, offending_span=span, offending_provenance=trail,
+        )
 
     # 5. Approval.
     if spec.require_approval:
         return decide(Effect.REQUIRE_APPROVAL, Rule.APPROVAL,
-                      f"'{action}' is marked require_approval; a human has to confirm it")
+                      f"'{action}' is marked require_approval; a human has to confirm it",
+                      declassified=declassified)
 
     if not enforced:
         return decide(Effect.ALLOW, Rule.OBSERVE_ONLY,
-                      "permitted (engine is in observe-only mode, nothing would have been blocked)")
+                      "permitted (engine is in observe-only mode, nothing would have been blocked)",
+                      declassified=declassified)
+
+    if declassified:
+        detail = ", ".join(f"{a} by {r}" for a, r in sorted(declassified.items()))
+        return decide(Effect.ALLOW, Rule.DECLASSIFIED,
+                      f"'{action}' permitted: {detail}. The value did not come from the human, but the "
+                      f"policy declares it acceptable for this argument.",
+                      declassified=declassified)
 
     return decide(Effect.ALLOW, Rule.PERMITTED,
                   f"'{principal}' holds '{spec.capability}' and every control argument of '{action}' "
                   f"is grounded in trusted provenance")
+
+
+def _declassifier_for(spec: ActionSpec, arg: str, value, policy: Policy) -> str | None:
+    """The first declassifier that accepts this value, or None.
+
+    Every tainted value inside the argument has to pass, not just one: a
+    recipient list where two of three addresses are on the allowlist is not
+    an allowlisted call.
+    """
+    rules = spec.declassifiers_for(arg)
+    if not rules:
+        return None
+
+    tainted = _all_untrusted(value)
+    for rule in rules:
+        if all(rule.permits(t.value, policy.value_sets) for t in tainted):
+            return rule.describe()
+    return None
+
+
+def _all_untrusted(value) -> list[TaintedValue]:
+    """Every untrusted leaf inside an argument."""
+    if isinstance(value, TaintedValue):
+        return [value] if value.label is TaintLabel.UNTRUSTED else []
+    children: tuple = ()
+    if isinstance(value, dict):
+        children = tuple(value.values())
+    elif isinstance(value, (list, tuple, set, frozenset)):
+        children = tuple(value)
+    found: list[TaintedValue] = []
+    for child in children:
+        found.extend(_all_untrusted(child))
+    return found
 
 
 def explain(action: str, args: dict, principal: str, policy: Policy) -> dict:
