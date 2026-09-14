@@ -49,6 +49,13 @@ including the durable audit write is **~100µs**, about 10,000/sec on one
 thread. Fast enough that there is never a reason to sample or to skip it
 under load.
 
+That 8% is our own naive regex scanner, not a commercial detector — read it
+as a floor for the category, not a score for anyone's product. Detection is
+still useful as telemetry, which is why one ships in the box, advisory and
+gating nothing. How SWARMS relates to Lakera, Cedar/AgentCore, CaMeL and the
+MCP gateways — including where it is weaker — is set out in
+[docs/competitive-landscape.md](docs/competitive-landscape.md).
+
 ## The rules
 
 Five checks, in order, all deterministic:
@@ -97,6 +104,38 @@ swarms init            # write a starter policy
 swarms policy check    # validate and lint it
 swarms redteam         # run 40 attacks and 8 benign controls against it
 ```
+
+## When the value legitimately comes from the data
+
+Grounding on its own refuses *reply to the customer who emailed us*, because
+that address really does come from untrusted input. A control that blocks
+real work gets switched off, so name the exceptions in the policy instead:
+
+```yaml
+value_sets:
+  corporate_directory: [boss@corp.example, finance@corp.example]
+
+actions:
+  send_email:
+    control_args: [to, cc, bcc]
+    declassify:
+      to:
+        - allowlist: corporate_directory          # must be one you wrote down
+        - pattern: '^[a-z0-9._%+-]+@corp\.example$'   # or inside your own domain
+```
+
+The permission comes from the file, never from the content, so controlling
+the document does not widen what is allowed. Every tainted value in an
+argument must pass — two of three addresses on the allowlist is not an
+allowlisted call — and each one is recorded, so *why was this permitted* has
+an answer that names the rule:
+
+```
+allow  declassified  to by allowlist:corporate_directory
+```
+
+An allowlist is a real boundary. A pattern is only as good as the expression,
+which is why `swarms policy check` says so every time it sees one.
 
 ## Validate your own configuration
 
@@ -158,6 +197,55 @@ retrieved document, web page and message from another agent. Content that is
 never ingested cannot be recognised later. An un-instrumented source is a
 hole in the model, exactly as it is in any taint system.
 
+## MCP: enforcement without touching the agent
+
+The Model Context Protocol says how a server authenticates a client, not
+whether a given call should execute. That gap is the confused-deputy one: an
+agent with a legitimate, broadly-scoped grant is talked into using it by
+something it read.
+
+Point the client at the gateway instead of the upstream server:
+
+```bash
+swarms serve --mcp-upstream https://mcp.internal/mcp --mcp-principal assistant
+```
+
+```jsonc
+// the agent's MCP config — the only change is the URL
+{ "mcpServers": { "tools": { "url": "http://localhost:8000/mcp" } } }
+```
+
+No decorators, no SDK calls, no code change. **Every tool result the gateway
+relays is ingested as untrusted content for that session**, so the provenance
+the enforcement needs is recovered from traffic the gateway is already
+carrying. An agent that reads a page through one tool and then calls another
+with an address lifted out of it is refused, and told where the value came
+from:
+
+```jsonc
+{"error": {"code": -32040, "message": "SWARMS refused this call: ...",
+  "data": {"swarms": {
+    "rule": "grounding",
+    "offending_argument": "to",
+    "offending_value": "exfil@evil.example",
+    "provenance": ["ingest:mcp:tools/call:fetch_page"],
+    "remedy": "If 'to' legitimately comes from content here, add a declassify rule..."}}}}
+```
+
+A refusal is a JSON-RPC error over HTTP 200, not a 5xx: a considered answer,
+not an outage, so clients do not retry or fail over to an unguarded path.
+
+Approval-gated actions use the protocol's own Multi Round-Trip Requests
+(`resultType: "input_required"`) rather than failing the call. The
+elicitation *notifies* a human; the approval store *authorizes*, so an agent
+that fabricates an affirmative answer gets nothing.
+
+Targets MCP revision `2026-07-28` — stateless, with `Mcp-Method` and
+`Mcp-Name` routing. Unattributable arguments are trusted by default, because
+the first call of any session happens before anything has been ingested;
+`--mcp-strict` reverses that and expects the client to declare the user's
+request in an `X-Swarms-Task` header.
+
 ## Gateway and console
 
 For non-Python stacks, or when you want the audit trail and approval queue:
@@ -183,6 +271,8 @@ curl -X POST localhost:8000/v1/authorize -H "Authorization: Bearer $KEY" \
 | `POST /v1/authorize` | decide a tool call |
 | `GET /api/decisions` `/api/stats` | the audit trail |
 | `GET /api/approvals` | the approval queue |
+| `POST /mcp` | MCP relay with enforcement (when an upstream is configured) |
+| `GET /api/mcp` | gateway status |
 | `GET /metrics` | Prometheus |
 | `GET /docs` | OpenAPI |
 
@@ -238,6 +328,11 @@ enforce.
 - **Provenance depends on `ingest()`.** Content you never register cannot be
   attributed. This is the usage contract, and it is where a deployment most
   often goes wrong.
+- **Provenance is recovered by matching, not dataflow.** Values are compared
+  against ingested text, because nothing survives a round trip through a
+  model's weights. A value the model paraphrases rather than copies is not
+  matched. CaMeL's interpreter does not have this weakness; it pays for that
+  by requiring you to restructure the agent.
 - **The corpus is 40 hand-written attacks.** A floor, not a proof, and not a
   red-team campaign.
 - **Server-side sessions are per-worker.** Run one worker, or add session
@@ -261,9 +356,12 @@ swarms/
   server/        FastAPI gateway, API-key auth
   detect/        advisory content scanner, gates nothing
   redteam/       the corpus, the vulnerable pipeline, the suite
+  declassify.py  allowlist and pattern rules for untrusted control values
+  mcp.py         MCP gateway: relay, enforce, auto-ingest tool results
 web/             the operator console
 examples/        runnable integrations
-tests/           98 tests
+docs/            architecture, competitive landscape
+tests/           131 tests
 ```
 
 ## Running the tests

@@ -53,6 +53,16 @@ def cmd_serve(args) -> int:
     if args.observe:
         os.environ["SWARMS_ENFORCE"] = "0"
         print("observe-only: decisions are recorded, nothing is blocked")
+    if args.mcp_upstream:
+        os.environ["SWARMS_MCP_UPSTREAM"] = args.mcp_upstream
+        if args.mcp_principal:
+            os.environ["SWARMS_MCP_PRINCIPAL"] = args.mcp_principal
+        if args.mcp_strict:
+            os.environ["SWARMS_MCP_STRICT"] = "1"
+        print(f"MCP gateway on: POST http://{args.host}:{args.port}/mcp -> {args.mcp_upstream}")
+        print("  point your MCP client at this gateway instead of the upstream server")
+        if not args.mcp_strict:
+            print("  unattributed arguments are trusted; --mcp-strict requires an X-Swarms-Task header")
     uvicorn.run("swarms.server.app:app", host=args.host, port=args.port,
                 reload=args.reload, log_level=args.log_level)
     return 0
@@ -153,6 +163,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--db", help="audit database path")
     p.add_argument("--observe", action="store_true",
                    help="record decisions without blocking anything")
+    p.add_argument("--mcp-upstream", metavar="URL",
+                   help="relay MCP traffic to this server, enforcing grounding on every tools/call")
+    p.add_argument("--mcp-principal", metavar="NAME",
+                   help="policy principal the relayed agent acts as")
+    p.add_argument("--mcp-strict", action="store_true",
+                   help="refuse arguments that trace to neither ingested content nor the declared task")
     p.add_argument("--reload", action="store_true")
     p.add_argument("--log-level", default="info")
     p.set_defaults(func=cmd_serve)
